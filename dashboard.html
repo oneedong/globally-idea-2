@@ -6,6 +6,7 @@
     <title>KB증권 세일즈 계약 관리 시스템</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <div class="container">
@@ -22,7 +23,7 @@
         
         <div class="content">
             <aside class="sidebar">
-                <h2>연도별 계약서</h2>
+                <h2>계약 연도</h2>
                 <ul id="year-list">
                     <!-- 연도 목록은 JavaScript로 동적 생성됩니다 -->
                 </ul>
@@ -44,6 +45,17 @@
                             </select>
                         </div>
                         <div class="filter-item">
+                            <label for="filter-type">계약 종류:</label>
+                            <select id="filter-type" onchange="applyFilters()">
+                                <option value="">전체</option>
+                                <option value="매매계약">매매계약</option>
+                                <option value="용역계약">용역계약</option>
+                                <option value="공급계약">공급계약</option>
+                                <option value="대리점계약">대리점계약</option>
+                                <option value="기타">기타</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
                             <label for="filter-company">거래 상대방:</label>
                             <select id="filter-company" onchange="applyFilters()">
                                 <option value="">전체</option>
@@ -54,8 +66,8 @@
                             <select id="filter-status" onchange="applyFilters()">
                                 <option value="">전체</option>
                                 <option value="법무검토 완료">법무검토 완료</option>
-                                <option value="체결중">체결중</option>
-                                <option value="체결완료">체결완료</option>
+                                <option value="체결 진행중">체결 진행중</option>
+                                <option value="체결 완료">체결 완료</option>
                             </select>
                         </div>
                         <button onclick="resetFilters()" class="reset-filters-btn">필터 초기화</button>
@@ -64,7 +76,9 @@
                         <thead>
                             <tr>
                                 <th>No.</th>
+                                <th>계약번호</th>
                                 <th>계약명</th>
+                                <th>계약 종류</th>
                                 <th>거래 상대방</th>
                                 <th>체결일자</th>
                                 <th>체결 현황</th>
@@ -77,6 +91,11 @@
                             <!-- 계약 목록은 JavaScript로 동적 생성됩니다 -->
                         </tbody>
                     </table>
+                    
+                    <!-- 페이지네이션 -->
+                    <div class="pagination-container">
+                        <div id="pagination" class="pagination"></div>
+                    </div>
                 </div>
                 
                 <footer class="dashboard-footer">
@@ -93,30 +112,45 @@
             <h2>계약 추가</h2>
             <form id="add-contract-form">
                 <div class="form-group">
-                    <label for="contract-name">계약명</label>
-                    <input type="text" id="contract-name">
+                    <label for="add-contract-name">계약명</label>
+                    <input type="text" id="add-contract-name" required>
                 </div>
                 <div class="form-group">
-                    <label for="contract-company">거래 상대방</label>
-                    <input type="text" id="contract-company">
-                </div>
-                <div class="form-group">
-                    <label for="contract-date">체결일자</label>
-                    <input type="date" id="contract-date">
-                </div>
-                <div class="form-group">
-                    <label for="contract-status">체결 현황</label>
-                    <select id="contract-status">
-                        <option value="법무검토 완료">법무검토 완료</option>
-                        <option value="체결중">체결중</option>
-                        <option value="체결완료">체결완료</option>
+                    <label for="add-contract-type">계약 종류</label>
+                    <select id="add-contract-type" required>
+                        <option value="매매계약">매매계약</option>
+                        <option value="용역계약">용역계약</option>
+                        <option value="공급계약">공급계약</option>
+                        <option value="대리점계약">대리점계약</option>
+                        <option value="기타">기타</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="contract-file">계약서 파일</label>
+                    <label for="add-contract-company">거래 상대방</label>
+                    <input type="text" id="add-contract-company" required>
+                </div>
+                <div class="form-group">
+                    <label for="add-contract-date">체결일자</label>
+                    <input type="date" id="add-contract-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="add-contract-status">체결 현황</label>
+                    <select id="add-contract-status" required>
+                        <option value="법무검토 완료">1. 법무검토 완료</option>
+                        <option value="체결 진행중">2. 체결 진행중</option>
+                        <option value="체결 완료">3. 체결 완료</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="add-contract-details">메모</label>
+                    <textarea id="add-contract-details" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="contract-file-input">계약서 파일</label>
                     <div class="file-upload-area" id="add-contract-file-area">
+                        <i class="fas fa-cloud-upload-alt"></i>
                         <span>파일을 드래그하거나 클릭하여 업로드</span>
-                        <input type="file" id="contract-file" class="file-upload-input" accept=".docx,.pdf">
+                        <input type="file" id="contract-file-input" class="file-upload-input" accept=".docx,.pdf">
                     </div>
                 </div>
                 <button type="submit">추가</button>
@@ -130,11 +164,12 @@
             <span class="close" onclick="closeContractDetailModal()">&times;</span>
             <h2 id="detail-contract-name"></h2>
             <div class="contract-detail-info">
+                <p><strong>계약번호:</strong> <span id="detail-contract-number"></span></p>
+                <p><strong>계약 종류:</strong> <span id="detail-contract-type"></span></p>
                 <p><strong>거래 상대방:</strong> <span id="detail-company"></span></p>
                 <p><strong>체결일자:</strong> <span id="detail-date"></span></p>
                 <p><strong>체결 현황:</strong> <span id="detail-status"></span></p>
-                <p><strong>담당자:</strong> <span id="detail-manager"></span></p>
-                <p><strong>상세 내용:</strong></p>
+                <p><strong>메모:</strong></p>
                 <div id="detail-content"></div>
             </div>
             <div class="contract-actions">

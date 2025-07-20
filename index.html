@@ -17,11 +17,11 @@
             
             <div class="login-form">
                 <div class="input-group">
-                    <input type="text" id="login-id" placeholder="아이디" value="KBSEC25">
+                    <input type="text" id="login-id" placeholder="아이디">
                 </div>
                 
                 <div class="input-group">
-                    <input type="password" id="login-password" placeholder="비밀번호" value="KBSEC25">
+                    <input type="password" id="login-password" placeholder="비밀번호">
                 </div>
                 
                 <div class="login-options">
@@ -35,6 +35,15 @@
                 </div>
                 
                 <button id="login-button" class="login-btn">로그인</button>
+                
+                <div class="contract-check-section">
+                    <hr>
+                    <h3>계약 상황 조회</h3>
+                    <div class="input-group">
+                        <input type="text" id="contract-number" placeholder="계약번호 입력">
+                    </div>
+                    <button id="check-contract-button" class="check-contract-btn">조회하기</button>
+                </div>
             </div>
             
             <div class="login-footer">
@@ -67,6 +76,37 @@
                 </div>
                 <button type="submit">회원가입</button>
             </form>
+        </div>
+    </div>
+    
+    <!-- 계약 상황 조회 모달 -->
+    <div id="contract-status-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeContractStatusModal()">&times;</span>
+            <h2>계약 상황 조회</h2>
+            <div id="contract-status-details">
+                <p>계약번호: <span id="status-contract-number"></span></p>
+                <p>계약명: <span id="status-contract-name"></span></p>
+                <p>고객사: <span id="status-client-name"></span></p>
+                <p>계약일자: <span id="status-contract-date"></span></p>
+                <p>계약상태: <span id="status-contract-status"></span></p>
+                <div id="status-progress-bar" class="progress-bar-container">
+                    <div class="progress-step">
+                        <div class="step-circle" data-step="1">1</div>
+                        <div class="step-name">계약 체결</div>
+                    </div>
+                    <div class="progress-line"></div>
+                    <div class="progress-step">
+                        <div class="step-circle" data-step="2">2</div>
+                        <div class="step-name">검토 중</div>
+                    </div>
+                    <div class="progress-line"></div>
+                    <div class="progress-step">
+                        <div class="step-circle" data-step="3">3</div>
+                        <div class="step-name">완료</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
