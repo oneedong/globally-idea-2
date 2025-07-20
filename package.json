@@ -1,0 +1,12 @@
+{
+  "name": "kb-contract-system",
+  "version": "1.0.0",
+  "description": "KB 증권 계약서 관리 시스템",
+  "main": "script.js",
+  "scripts": {
+    "start": "serve"
+  },
+  "dependencies": {
+    "serve": "^14.0.0"
+  }
+}

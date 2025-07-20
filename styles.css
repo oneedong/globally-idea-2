@@ -1,0 +1,719 @@
+/* 전체 스타일 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* 로그인 페이지 스타일 */
+.login-page {
+    background: url('images/KB sec_hompage_2.jpg') no-repeat center center;
+    background-size: cover;
+    background-color: #0a2e5c;
+    min-height: 100vh;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.login-container {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding-left: 10%;
+}
+
+.login-box {
+    background-color: rgba(255, 255, 255, 0.95);
+    width: 100%;
+    max-width: 380px;
+    padding: 2.5rem 2rem;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    border: none;
+}
+
+.login-logo {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.login-logo img {
+    height: auto;
+    width: 220px;
+    margin-bottom: 2.5rem;
+    object-fit: contain;
+}
+
+.login-logo h1 {
+    font-size: 1.4rem;
+    color: #333;
+    font-weight: 600;
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+.login-form {
+    margin-bottom: 2rem;
+}
+
+.select-wrapper {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.select-wrapper select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1em;
+}
+
+.input-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 0.9rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+    background-color: #f8f8f8;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #FFCC00;
+    box-shadow: 0 0 0 2px rgba(255, 204, 0, 0.2);
+}
+
+.login-options {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    font-size: 0.85rem;
+}
+
+.remember-id {
+    display: flex;
+    align-items: center;
+}
+
+.remember-id input {
+    margin-right: 0.5rem;
+}
+
+.find-account a {
+    color: #666;
+    text-decoration: none;
+}
+
+.find-account a:hover {
+    color: #FFCC00;
+    text-decoration: underline;
+}
+
+.login-btn {
+    width: 100%;
+    padding: 1rem;
+    background-color: #FFCC00;
+    color: #333333;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 1.5rem;
+    transition: background-color 0.3s;
+}
+
+.login-btn:hover {
+    background-color: #FFB800;
+}
+
+.register-link {
+    text-align: center;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: #ff0000;
+}
+
+.register-link p {
+    line-height: 1.4;
+}
+
+.id-save-option {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.id-save-option input {
+    margin-right: 0.5rem;
+}
+
+.customer-service {
+    border-top: 1px solid #eee;
+    padding-top: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.customer-service h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+.service-hours {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.service-hours p {
+    margin-bottom: 0.3rem;
+}
+
+.service-hours span {
+    display: inline-block;
+    width: 100px;
+    font-weight: 500;
+}
+
+.login-footer {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #999;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+/* 체크박스 커스텀 스타일 */
+input[type="checkbox"] {
+    accent-color: #FFCC00;
+}
+
+/* 대시보드 스타일 */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0;
+    background-color: #fff;
+    min-height: 100vh;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 헤더 스타일 */
+header {
+    background-color: #FFCC00;
+    color: #333;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    height: 35px;
+    margin-right: 12px;
+    object-fit: contain;
+}
+
+header h1 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-left: 5px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+button {
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* 콘텐츠 영역 스타일 */
+.content {
+    display: flex;
+    min-height: calc(100vh - 80px);
+}
+
+/* 사이드바 스타일 */
+.sidebar {
+    width: 200px;
+    background-color: #f8f9fa;
+    padding: 1.5rem 1rem;
+    border-right: 1px solid #dee2e6;
+}
+
+.sidebar h2 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.sidebar ul {
+    list-style-type: none;
+}
+
+.sidebar li {
+    margin-bottom: 0.5rem;
+}
+
+.sidebar a {
+    display: block;
+    padding: 0.5rem;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.sidebar a:hover {
+    background-color: #e9ecef;
+}
+
+.sidebar a.active {
+    background-color: #FFCC00;
+    color: #333;
+}
+
+/* 메인 콘텐츠 스타일 */
+.main-content {
+    flex: 1;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.centered-message {
+    text-align: center;
+    margin-top: 3rem;
+}
+
+.search-bar {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 10px;
+}
+
+.search-bar input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.add-contract-btn {
+    background-color: #FFCC00;
+    color: #333;
+}
+
+.add-contract-btn:hover {
+    background-color: #FFB800;
+}
+
+/* 테이블 스타일 */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+th, td {
+    padding: 0.75rem;
+    text-align: center; /* 텍스트 가운데 정렬로 변경 */
+    border-bottom: 1px solid #dee2e6;
+}
+
+th {
+    background-color: #f8f9fa;
+    font-weight: 500;
+}
+
+tr:hover {
+    background-color: #f8f9fa;
+}
+
+.detail-btn {
+    background-color: #FFCC00;
+    color: #333;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.detail-btn:hover {
+    background-color: #FFB800;
+}
+
+/* 대시보드 푸터 스타일 */
+.dashboard-footer {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #999;
+    margin-top: auto;
+    padding-top: 2rem;
+    padding-bottom: 1rem;
+}
+
+/* 모달 스타일 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    overflow: auto;
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 2rem;
+    border-radius: 5px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 50%;
+    max-width: 500px;
+    position: relative;
+}
+
+.close {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #FFCC00;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.contract-detail-info {
+    margin-top: 1rem;
+    line-height: 1.8;
+}
+
+.contract-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+    .content {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .modal-content {
+        width: 90%;
+    }
+    
+    header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .logo-container {
+        margin-bottom: 1rem;
+    }
+} 
+
+/* 파일 업로드 영역 스타일 */
+.file-upload-area {
+    position: relative;
+    width: 100%;
+    min-height: 40px;
+    border: 2px dashed #ccc;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.file-upload-area:hover {
+    border-color: #007BFF;
+    background-color: #f8f9fa;
+}
+
+.file-upload-area.drag-over {
+    border-color: #28a745;
+    background-color: #e8f5e9;
+}
+
+.file-upload-input {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 5px;
+}
+
+.docx-icon {
+    color: #2b579a;
+}
+
+.pdf-icon {
+    color: #f40f02;
+}
+
+.file-name {
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+.file-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.download-btn, .delete-btn {
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background-color 0.3s;
+}
+
+.download-btn:hover {
+    background-color: #0056b3;
+}
+
+/* 삭제 버튼 스타일 */
+.delete-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.delete-btn:hover {
+    background-color: #c82333;
+}
+
+/* 파일 삭제 버튼 스타일 */
+.delete-file-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    font-size: 12px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.file-container:hover .delete-file-btn {
+    opacity: 1;
+}
+
+.delete-file-btn:hover {
+    background-color: #c82333;
+} 
+
+/* 필터 스타일 */
+.filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border: 1px solid #eee;
+}
+
+.filter-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.filter-item label {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.filter-item select {
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.reset-filters-btn {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-left: auto;
+}
+
+.reset-filters-btn:hover {
+    background-color: #5a6268;
+} 
+
+/* 파일 컨테이너 스타일 */
+.file-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    position: relative;
+    transition: all 0.2s;
+    max-width: 40px;
+    height: 40px;
+    margin: 0 auto;
+}
+
+.file-container:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.file-container .file-icon {
+    width: 24px;
+    height: 24px;
+    margin: 0 auto;
+    display: block;
+}
+
+/* 수정 버튼 스타일 */
+.edit-btn {
+    background-color: #17a2b8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.edit-btn:hover {
+    background-color: #138496;
+}
+
+/* 파일 추가 버튼 스타일 */
+.add-file-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.add-file-btn:hover {
+    background-color: #218838;
+} 
