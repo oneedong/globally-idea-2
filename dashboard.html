@@ -10,6 +10,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
           integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
           crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Firebase SDK 추가 -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
+    <!-- Firebase 설정 파일 -->
+    <script src="firebase-config.js"></script>
 </head>
 <body>
     <div class="container">
@@ -37,8 +44,8 @@
                     <h2 id="selected-year">계약 목록</h2>
                     <div class="search-bar">
                         <input type="text" id="search-input" placeholder="검색어 입력...">
-                        <button onclick="searchContracts()">검색</button>
-                        <button class="add-contract-btn" onclick="showAddContractModal()">계약 추가</button>
+                        <button id="search-btn">검색</button>
+                        <button class="add-contract-btn" id="add-contract-btn">계약 추가</button>
                     </div>
                     <div class="filter-container">
                         <div class="filter-item">
@@ -73,7 +80,8 @@
                                 <option value="체결 완료">체결 완료</option>
                             </select>
                         </div>
-                        <button onclick="resetFilters()" class="reset-filters-btn">필터 초기화</button>
+                        <button id="apply-filters-btn" class="apply-filters-btn">필터 적용</button>
+                        <button id="reset-filters-btn" class="reset-filters-btn">필터 초기화</button>
                     </div>
                     <table id="contract-table">
                         <colgroup>
@@ -114,7 +122,7 @@
                 </div>
                 
                 <footer class="dashboard-footer">
-                    <p>Copyright © S&T 글로벌리조. All Right Reserved.</p>
+                    <p>Copyright © KB증권. All Rights Reserved.</p>
                 </footer>
             </main>
         </div>
@@ -123,7 +131,7 @@
     <!-- 계약 추가 모달 -->
     <div id="add-contract-modal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeAddContractModal()">&times;</span>
+            <span class="close" id="close-add-contract-modal">&times;</span>
             <h2>계약 추가</h2>
             <form id="add-contract-form">
                 <div class="form-group">
@@ -168,7 +176,9 @@
                         <input type="file" id="contract-file-input" class="file-upload-input" accept=".docx,.doc,.pdf,.xls,.xlsx,.ppt,.pptx,.hwp,.txt">
                     </div>
                 </div>
-                <button type="submit">추가</button>
+                <div class="button-container">
+                    <button type="submit">추가</button>
+                </div>
             </form>
         </div>
     </div>
@@ -176,7 +186,7 @@
     <!-- 계약 상세 모달 -->
     <div id="contract-detail-modal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeContractDetailModal()">&times;</span>
+            <span class="close" id="close-contract-detail-modal">&times;</span>
             <h2 id="detail-contract-name"></h2>
             <div class="contract-detail-info">
                 <p><strong>계약번호:</strong> <span id="detail-contract-number"></span></p>
@@ -188,9 +198,65 @@
                 <div id="detail-content"></div>
             </div>
             <div class="contract-actions">
-                <button onclick="editContract()">수정</button>
-                <button onclick="deleteContract()">삭제</button>
+                <button id="edit-contract-btn">수정</button>
+                <button id="delete-contract-btn">삭제</button>
             </div>
+        </div>
+    </div>
+
+    <!-- 계약 수정 모달 -->
+    <div id="edit-contract-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="close-edit-contract-modal">&times;</span>
+            <h2>계약 수정</h2>
+            <form id="edit-contract-form">
+                <div class="form-group">
+                    <label for="edit-contract-name">계약명</label>
+                    <input type="text" id="edit-contract-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-contract-type">계약 종류</label>
+                    <select id="edit-contract-type" required>
+                        <option value="매매계약">매매계약</option>
+                        <option value="용역계약">용역계약</option>
+                        <option value="공급계약">공급계약</option>
+                        <option value="대리점계약">대리점계약</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-contract-company">거래 상대방</label>
+                    <input type="text" id="edit-contract-company" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-contract-date">체결일자</label>
+                    <input type="date" id="edit-contract-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-contract-status">체결 현황</label>
+                    <select id="edit-contract-status" required>
+                        <option value="법무검토 완료">1. 법무검토 완료</option>
+                        <option value="체결 진행중">2. 체결 진행중</option>
+                        <option value="체결 완료">3. 체결 완료</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-contract-details">메모</label>
+                    <textarea id="edit-contract-details" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="edit-contract-file-input">계약서 파일</label>
+                    <div class="file-upload-area" id="edit-contract-file-area">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>파일을 드래그하거나 클릭하여 업로드</span>
+                        <input type="file" id="edit-contract-file-input" class="file-upload-input" accept=".docx,.doc,.pdf,.xls,.xlsx,.ppt,.pptx,.hwp,.txt">
+                    </div>
+                </div>
+                <div class="button-container">
+                    <button type="submit" id="save-contract-btn">저장</button>
+                    <button type="button" id="temp-save-contract-btn">임시 저장</button>
+                </div>
+            </form>
         </div>
     </div>
 

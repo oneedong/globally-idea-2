@@ -6,124 +6,93 @@
     <title>KB증권 계약 관리 시스템</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <style>
-        /* 로그인 컨테이너 중앙 정렬 및 최적화 */
-        .login-container {
-            justify-content: center;
-            padding: 0 20px;
-        }
-        
-        /* 배경 이미지 최적화 */
-        .login-page {
-            background-position: center;
-            background-size: cover; /* 배경 이미지 꽉 차게 설정 */
-        }
-        
-        /* 로그인 박스 크기 최적화 */
-        .login-box {
-            max-width: 350px;
-            padding: 25px 20px;
-        }
-    </style>
+    <!-- Firebase SDK 추가 -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
+    <!-- Firebase 설정 파일 -->
+    <script src="firebase-config.js"></script>
 </head>
-<body>
-    <div class="login-page">
-        <div class="login-container">
-            <div class="login-box">
-                <div class="login-logo">
-                    <img src="images/KB_logo_cut_trim.png" alt="KB증권 로고">
-                    <h1>세일즈 계약 관리 시스템</h1>
-                </div>
-                <form class="login-form" id="login-form">
-                    <div class="input-group">
-                        <input type="text" id="login-id" placeholder="아이디" required>
-                    </div>
-                    <div class="input-group">
-                        <input type="password" id="login-password" placeholder="비밀번호" required>
-                    </div>
-                    <div class="login-options">
-                        <div class="remember-id">
-                            <input type="checkbox" id="remember-id">
-                            <label for="remember-id">아이디 저장</label>
-                        </div>
-                    </div>
-                    <button type="submit" class="login-btn">로그인</button>
-                    <div class="register-link">
-                        <p>* 아직 계정이 없으신가요? <a href="#" id="register-link">회원가입</a></p>
-                    </div>
-                </form>
-                
-                <div class="contract-check-section">
-                    <h3>계약 상태 조회</h3>
-                    <div class="contract-check-form">
-                        <input type="text" id="quick-contract-number" placeholder="계약번호 입력" required>
-                        <button type="button" class="check-contract-btn">조회</button>
-                    </div>
-                </div>
-                
-                <div class="login-footer">
-                    <p>Copyright © S&T 글로벌리조. All Right Reserved.</p>
-                </div>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-logo">
+                <img src="images/KB_logo_cut_trim.png" alt="KB증권 로고">
+                <h1>세일즈 계약 관리 시스템</h1>
             </div>
-        </div>
-    </div>
-
-    <!-- 회원가입 모달 -->
-    <div id="register-modal" class="modal">
-        <div class="modal-content">
-            <span class="close" id="close-register-modal">&times;</span>
-            <h2>회원가입</h2>
-            <form id="register-form">
-                <div class="form-group">
-                    <label for="register-department">부서</label>
-                    <input type="text" id="register-department" placeholder="부서명 입력" required>
+            <form id="login-form" class="login-form">
+                <div class="select-wrapper">
+                    <select id="department-select">
+                        <option value="">부서 선택</option>
+                        <option value="영업부">영업부</option>
+                        <option value="마케팅부">마케팅부</option>
+                        <option value="기획부">기획부</option>
+                        <option value="관리부">관리부</option>
+                        <option value="인사부">인사부</option>
+                    </select>
                 </div>
-                <div class="form-group">
-                    <label for="register-id">아이디</label>
-                    <input type="text" id="register-id" required>
+                <div class="input-group">
+                    <input type="text" id="username" placeholder="사용자 ID" required>
                 </div>
-                <div class="form-group">
-                    <label for="register-password">비밀번호</label>
-                    <input type="password" id="register-password" required>
+                <div class="input-group">
+                    <input type="password" id="password" placeholder="비밀번호" required>
                 </div>
-                <div class="form-group">
-                    <label for="register-password-confirm">비밀번호 확인</label>
-                    <input type="password" id="register-password-confirm" required>
+                <div class="login-options">
+                    <div class="remember-id">
+                        <input type="checkbox" id="remember-id">
+                        <label for="remember-id">아이디 저장</label>
+                    </div>
+                    <div class="find-account">
+                        <a href="#">아이디/비밀번호 찾기</a>
+                    </div>
                 </div>
-                <button type="submit">가입하기</button>
+                <button type="submit" class="login-btn">로그인</button>
+                <div class="register-link">
+                    계정이 없으신가요? <a href="#" id="register-link">회원가입</a>
+                </div>
             </form>
-        </div>
-    </div>
-
-    <!-- 계약 상태 조회 모달 -->
-    <div id="contract-check-modal" class="modal">
-        <div class="modal-content">
-            <span class="close" id="close-contract-check-modal">&times;</span>
-            <h2>계약 상태 조회</h2>
-            <div id="contract-check-result">
-                <h3>계약 정보</h3>
-                <div id="contract-info"></div>
-                
-                <div class="progress-bar-container" style="margin-top: 30px;">
-                    <div class="progress-step">
-                        <div class="step-circle" id="step1">1</div>
-                        <div class="step-name">법무검토 완료</div>
-                    </div>
-                    <div class="progress-line" id="line1"></div>
-                    <div class="progress-step">
-                        <div class="step-circle" id="step2">2</div>
-                        <div class="step-name">체결 진행중</div>
-                    </div>
-                    <div class="progress-line" id="line2"></div>
-                    <div class="progress-step">
-                        <div class="step-circle" id="step3">3</div>
-                        <div class="step-name">체결 완료</div>
-                    </div>
+            <form id="register-form" class="login-form" style="display: none;">
+                <div class="select-wrapper">
+                    <select id="register-department" required>
+                        <option value="">부서 선택</option>
+                        <option value="영업부">영업부</option>
+                        <option value="마케팅부">마케팅부</option>
+                        <option value="기획부">기획부</option>
+                        <option value="관리부">관리부</option>
+                        <option value="인사부">인사부</option>
+                    </select>
                 </div>
+                <div class="input-group">
+                    <input type="text" id="register-name" placeholder="이름" required>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="register-username" placeholder="사용자 ID" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="register-password" placeholder="비밀번호" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="register-confirm-password" placeholder="비밀번호 확인" required>
+                </div>
+                <button type="submit" class="login-btn">회원가입</button>
+                <div class="register-link">
+                    이미 계정이 있으신가요? <a href="#" id="login-link">로그인</a>
+                </div>
+            </form>
+            <div class="customer-service">
+                <h3>고객센터</h3>
+                <div class="service-hours">
+                    <p><span>평일</span> 09:00 ~ 18:00</p>
+                    <p><span>토요일</span> 09:00 ~ 13:00</p>
+                    <p><span>일요일/공휴일</span> 휴무</p>
+                </div>
+            </div>
+            <div class="login-footer">
+                Copyright © KB증권. All Rights Reserved.
             </div>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html> 

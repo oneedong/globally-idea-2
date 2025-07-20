@@ -1,8 +1,7 @@
 // 사용자 데이터를 로컬 스토리지에 저장
-let users = JSON.parse(localStorage.getItem('kbSecUsers')) || [];
 let currentUser = JSON.parse(localStorage.getItem('kbSecCurrentUser')) || null;
-let contracts = JSON.parse(localStorage.getItem('kbSecContracts')) || {};
-let contractNumbers = JSON.parse(localStorage.getItem('kbSecContractNumbers')) || {};
+let contracts = {};
+let contractNumbers = {};
 
 // 전역 변수로 페이지네이션 상태 관리
 let currentPage = 1;
@@ -12,802 +11,232 @@ const itemsPerPage = 30;
 document.addEventListener('DOMContentLoaded', function() {
     console.log('대시보드 페이지 로드됨');
     
-    // 로컬 스토리지에서 계약 데이터 로드
-    const contractsData = localStorage.getItem('kbSecContracts');
-    if (contractsData) {
-        contracts = JSON.parse(contractsData);
-        console.log('계약 데이터 로드 완료');
-    }
-    
-    // 로컬 스토리지에서 계약 번호 데이터 로드
-    const contractNumbersData = localStorage.getItem('kbSecContractNumbers');
-    if (contractNumbersData) {
-        contractNumbers = JSON.parse(contractNumbersData);
-    }
-    
-    // 로그인 체크
-    checkLogin();
-    
-    // 로그아웃 버튼 이벤트 설정
-    document.getElementById('logout-btn').addEventListener('click', logout);
-    
-    // 계약 검색 이벤트 설정
-    document.getElementById('search-btn').addEventListener('click', searchContracts);
-    document.getElementById('search-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            searchContracts();
+    // Firebase 인증 상태 확인
+    firebase.auth().onAuthStateChanged(function(user) {
+        if (user) {
+            console.log('Firebase 인증 상태:', user.uid);
+            // 사용자 정보 가져오기
+            firebase.firestore().collection('users').doc(user.uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const userData = doc.data();
+                        console.log('Firebase 사용자 데이터:', userData);
+                        
+                        // 로컬 스토리지에 사용자 정보 업데이트
+                        currentUser = {
+                            id: userData.username,
+                            department: userData.department,
+                            name: userData.name,
+                            isAdmin: userData.isAdmin || false,
+                            uid: user.uid
+                        };
+                        localStorage.setItem('kbSecCurrentUser', JSON.stringify(currentUser));
+                        
+                        // 사용자 이름 표시
+                        document.getElementById('user-name').textContent = userData.name + ' (' + userData.department + ')';
+                        
+                        // 계약 데이터 로드
+                        loadContractsFromFirestore();
+                    } else {
+                        console.log('사용자 데이터가 없음');
+                        logout();
+                    }
+                })
+                .catch((error) => {
+                    console.error('사용자 데이터 로드 오류:', error);
+                    logout();
+                });
+        } else {
+            console.log('로그인되지 않음');
+            window.location.href = 'index.html';
         }
     });
     
+    // 이벤트 리스너 설정
+    setupEventListeners();
+});
+
+// 이벤트 리스너 설정
+function setupEventListeners() {
+    // 로그아웃 버튼 이벤트 설정
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
+    
+    // 계약 검색 이벤트 설정
+    const searchBtn = document.getElementById('search-btn');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', searchContracts);
+    }
+    
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchContracts();
+            }
+        });
+    }
+    
     // 필터 적용 버튼 이벤트 설정
-    document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
+    const applyFiltersBtn = document.getElementById('apply-filters-btn');
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', applyFilters);
+    }
     
     // 필터 초기화 버튼 이벤트 설정
-    document.getElementById('reset-filters-btn').addEventListener('click', resetFilters);
+    const resetFiltersBtn = document.getElementById('reset-filters-btn');
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', resetFilters);
+    }
     
     // 계약 추가 버튼 이벤트 설정
-    document.getElementById('add-contract-btn').addEventListener('click', showAddContractModal);
+    const addContractBtn = document.getElementById('add-contract-btn');
+    if (addContractBtn) {
+        addContractBtn.addEventListener('click', showAddContractModal);
+    }
     
     // 계약 추가 모달 닫기 버튼 이벤트 설정
-    document.getElementById('close-add-contract-modal').addEventListener('click', closeAddContractModal);
+    const closeAddContractModalBtn = document.getElementById('close-add-contract-modal');
+    if (closeAddContractModalBtn) {
+        closeAddContractModalBtn.addEventListener('click', closeAddContractModal);
+    }
     
     // 계약 추가 폼 제출 이벤트 설정
-    document.getElementById('add-contract-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        addContract();
-    });
+    const addContractForm = document.getElementById('add-contract-form');
+    if (addContractForm) {
+        addContractForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            addContract();
+        });
+    }
     
     // 계약 상세 모달 닫기 버튼 이벤트 설정
-    document.getElementById('close-contract-detail-modal').addEventListener('click', closeContractDetailModal);
+    const closeContractDetailModalBtn = document.getElementById('close-contract-detail-modal');
+    if (closeContractDetailModalBtn) {
+        closeContractDetailModalBtn.addEventListener('click', closeContractDetailModal);
+    }
+    
+    // 계약 수정 버튼 이벤트 설정
+    const editContractBtn = document.getElementById('edit-contract-btn');
+    if (editContractBtn) {
+        editContractBtn.addEventListener('click', function() {
+            const modal = document.getElementById('contract-detail-modal');
+            const contractId = modal.getAttribute('data-contract-id');
+            const year = modal.getAttribute('data-contract-year');
+            showEditContractModal(contractId, year);
+        });
+    }
+    
+    // 계약 삭제 버튼 이벤트 설정
+    const deleteContractBtn = document.getElementById('delete-contract-btn');
+    if (deleteContractBtn) {
+        deleteContractBtn.addEventListener('click', function() {
+            const modal = document.getElementById('contract-detail-modal');
+            const contractId = modal.getAttribute('data-contract-id');
+            const year = modal.getAttribute('data-contract-year');
+            deleteContract(contractId, year);
+        });
+    }
     
     // 계약 수정 모달 닫기 버튼 이벤트 설정
-    document.getElementById('close-edit-contract-modal').addEventListener('click', function() {
-        document.getElementById('edit-contract-modal').style.display = 'none';
-    });
+    const closeEditContractModalBtn = document.getElementById('close-edit-contract-modal');
+    if (closeEditContractModalBtn) {
+        closeEditContractModalBtn.addEventListener('click', function() {
+            document.getElementById('edit-contract-modal').style.display = 'none';
+        });
+    }
     
     // 계약 수정 폼 제출 이벤트 설정
-    document.getElementById('edit-contract-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        editContract();
-    });
-    
-    // 계약 저장 버튼 이벤트 설정
-    document.getElementById('save-contract-btn').addEventListener('click', function() {
-        saveContractFromModal();
-    });
-    
-    // 계약 임시 저장 버튼 이벤트 설정
-    document.getElementById('temp-save-contract-btn').addEventListener('click', tempSaveContract);
+    const editContractForm = document.getElementById('edit-contract-form');
+    if (editContractForm) {
+        editContractForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            updateContract();
+        });
+    }
     
     // 파일 업로드 영역 설정
     setupFileUploadArea();
+}
+
+// Firestore에서 계약 데이터 로드
+function loadContractsFromFirestore() {
+    console.log('Firestore에서 계약 데이터 로드 시작');
     
-    // 테이블 리사이징 초기화
-    initializeTableResizing();
+    // 계약 데이터 초기화
+    contracts = {};
     
-    // 개발용 로컬 스토리지 초기화 (필요 시 주석 해제)
-    resetLocalStorage();
-});
+    // 계약 번호 데이터 로드
+    firebase.firestore().collection('contractNumbers').doc('numbers').get()
+        .then((doc) => {
+            if (doc.exists) {
+                contractNumbers = doc.data();
+                console.log('계약 번호 데이터 로드 완료');
+            } else {
+                contractNumbers = {};
+                console.log('계약 번호 데이터 없음, 초기화');
+                
+                // 계약 번호 데이터 생성
+                firebase.firestore().collection('contractNumbers').doc('numbers').set({});
+            }
+        })
+        .catch((error) => {
+            console.error('계약 번호 데이터 로드 오류:', error);
+            contractNumbers = {};
+        });
+    
+    // 계약 데이터 로드
+    firebase.firestore().collection('contracts')
+        .where('department', '==', currentUser.department)
+        .get()
+        .then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {
+                const contract = doc.data();
+                const year = new Date(contract.date).getFullYear().toString();
+                
+                // 해당 연도의 배열이 없으면 초기화
+                if (!contracts[year]) {
+                    contracts[year] = [];
+                }
+                
+                // 계약 데이터에 ID 추가
+                contract.id = doc.id;
+                
+                // 계약 배열에 추가
+                contracts[year].push(contract);
+            });
+            
+            console.log('계약 데이터 로드 완료');
+            
+            // 연도 목록 생성
+            createYearList();
+            
+            // 최신 연도 선택
+            const years = Object.keys(contracts).sort((a, b) => b - a);
+            if (years.length > 0) {
+                loadContractsByYear(years[0]);
+            } else {
+                loadContractsByYear(new Date().getFullYear().toString());
+            }
+        })
+        .catch((error) => {
+            console.error('계약 데이터 로드 오류:', error);
+        });
+}
 
 // 로그아웃 처리
 function logout() {
-    localStorage.removeItem('kbSecCurrentUser');
-    window.location.href = 'index.html';
-}
-
-// 연도별 계약 목록 로드
-function loadContractsByYear(year) {
-    // 모든 연도 링크에서 active 클래스 제거
-    const yearLinks = document.querySelectorAll('#year-list a');
-    yearLinks.forEach(link => link.classList.remove('active'));
-    
-    // 선택된 연도 링크에 active 클래스 추가
-    const selectedYearLink = document.querySelector(`#year-list a[data-year="${year}"]`);
-    if (selectedYearLink) {
-        selectedYearLink.classList.add('active');
-    }
-    
-    // 선택된 연도 표시
-    document.getElementById('selected-year').textContent = year + '년 계약 목록';
-    
-    // 필터 옵션 업데이트
-    updateFilterOptions(year);
-    
-    // 계약 목록 표시
-    displayContracts(year);
-    
-    // 테이블 열 너비 조절 기능 초기화
-    setTimeout(function() {
-        initializeTableResizing();
-        console.log('계약 목록 로드 후 테이블 열 너비 조절 기능 초기화');
-    }, 200);
-}
-
-// 필터 옵션 업데이트
-function updateFilterOptions(year) {
-    const contractsForYear = contracts[year] || [];
-    
-    // 계약명 필터 옵션 업데이트
-    const nameFilter = document.getElementById('filter-name');
-    nameFilter.innerHTML = '<option value="">전체</option>';
-    
-    // 계약 종류 필터 옵션은 고정값이므로 업데이트하지 않음
-    
-    // 거래 상대방 필터 옵션 업데이트
-    const companyFilter = document.getElementById('filter-company');
-    companyFilter.innerHTML = '<option value="">전체</option>';
-    
-    // 중복 제거를 위한 Set 생성
-    const nameSet = new Set();
-    const companySet = new Set();
-    
-    // 각 계약에서 고유한 값 추출
-    contractsForYear.forEach(contract => {
-        if (contract.name) nameSet.add(contract.name);
-        if (contract.company) companySet.add(contract.company);
-    });
-    
-    // 계약명 옵션 추가
-    nameSet.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        nameFilter.appendChild(option);
-    });
-    
-    // 거래 상대방 옵션 추가
-    companySet.forEach(company => {
-        const option = document.createElement('option');
-        option.value = company;
-        option.textContent = company;
-        companyFilter.appendChild(option);
-    });
-}
-
-// 필터 적용
-function applyFilters() {
-    const selectedYear = document.querySelector('#year-list a.active')?.getAttribute('data-year');
-    if (!selectedYear) return;
-    
-    displayContracts(selectedYear);
-}
-
-// 필터 초기화
-function resetFilters() {
-    document.getElementById('filter-name').value = '';
-    document.getElementById('filter-company').value = '';
-    document.getElementById('filter-status').value = '';
-    document.getElementById('search-input').value = '';
-    
-    const selectedYear = document.querySelector('#year-list a.active')?.getAttribute('data-year');
-    if (selectedYear) {
-        displayContracts(selectedYear);
-    }
-}
-
-// 계약 목록 표시
-function displayContracts(year) {
-    const contractList = document.getElementById('contract-list');
-    contractList.innerHTML = '';
-    
-    // 관리자는 모든 계약을 볼 수 있고, 일반 사용자는 자신의 부서 계약만 볼 수 있음
-    let filteredContracts = [];
-    
-    if (currentUser.isAdmin) {
-        filteredContracts = contracts[year] || [];
-    } else {
-        filteredContracts = (contracts[year] || []).filter(contract => 
-            contract.department === currentUser.department
-        );
-    }
-    
-    // 필터 적용
-    const nameFilter = document.getElementById('filter-name').value;
-    const typeFilter = document.getElementById('filter-type').value;
-    const companyFilter = document.getElementById('filter-company').value;
-    const statusFilter = document.getElementById('filter-status').value;
-    const searchQuery = document.getElementById('search-input').value.toLowerCase();
-    
-    if (nameFilter || typeFilter || companyFilter || statusFilter || searchQuery) {
-        filteredContracts = filteredContracts.filter(contract => {
-            const matchesName = !nameFilter || contract.name === nameFilter;
-            const matchesType = !typeFilter || contract.type === typeFilter;
-            const matchesCompany = !companyFilter || contract.company === companyFilter;
-            const matchesStatus = !statusFilter || contract.status === statusFilter;
-            const matchesSearch = !searchQuery || 
-                contract.name.toLowerCase().includes(searchQuery) || 
-                (contract.type && contract.type.toLowerCase().includes(searchQuery)) ||
-                contract.company.toLowerCase().includes(searchQuery) ||
-                contract.status.toLowerCase().includes(searchQuery) ||
-                (contract.contractNumber && contract.contractNumber.toLowerCase().includes(searchQuery));
-                
-            return matchesName && matchesType && matchesCompany && matchesStatus && matchesSearch;
+    firebase.auth().signOut()
+        .then(() => {
+            localStorage.removeItem('kbSecCurrentUser');
+            window.location.href = 'index.html';
+        })
+        .catch((error) => {
+            console.error('로그아웃 오류:', error);
+            alert('로그아웃 중 오류가 발생했습니다.');
         });
-    }
-    
-    if (filteredContracts.length === 0) {
-        const tr = document.createElement('tr');
-        const td = document.createElement('td');
-        td.colSpan = 10; // 컬럼 수 증가 (계약 종류 열 추가)
-        td.textContent = '등록된 계약이 없습니다.';
-        td.style.textAlign = 'center';
-        tr.appendChild(td);
-        contractList.appendChild(tr);
-        
-        // 페이지네이션 숨기기
-        document.querySelector('.pagination-container').style.display = 'none';
-        return;
-    }
-    
-    // 페이지네이션 표시
-    document.querySelector('.pagination-container').style.display = 'flex';
-    
-    // 번호 매기기를 위해 정렬 (최신 등록순)
-    filteredContracts.sort((a, b) => {
-        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-    });
-    
-    // 전체 페이지 수 계산
-    const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
-    
-    // 현재 페이지가 전체 페이지 수를 초과하지 않도록 조정
-    if (currentPage > totalPages) {
-        currentPage = 1;
-    }
-    
-    // 현재 페이지에 해당하는 계약만 표시
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, filteredContracts.length);
-    const currentPageContracts = filteredContracts.slice(startIndex, endIndex);
-    
-    // 계약 목록 표시
-    currentPageContracts.forEach((contract, index) => {
-        const tr = document.createElement('tr');
-        
-        // 번호 열 추가 (전체 인덱스 계산)
-        const noTd = document.createElement('td');
-        noTd.textContent = startIndex + index + 1;
-        noTd.style.textAlign = 'center';
-        tr.appendChild(noTd);
-        
-        // 계약번호 열 추가
-        const contractNumberTd = document.createElement('td');
-        contractNumberTd.textContent = contract.contractNumber || '-';
-        contractNumberTd.style.textAlign = 'center';
-        tr.appendChild(contractNumberTd);
-        
-        const nameTd = document.createElement('td');
-        nameTd.textContent = contract.name;
-        nameTd.style.textAlign = 'center';
-        tr.appendChild(nameTd);
-        
-        // 계약 종류 열 추가
-        const typeTd = document.createElement('td');
-        typeTd.textContent = contract.type || '-';
-        typeTd.style.textAlign = 'center';
-        tr.appendChild(typeTd);
-        
-        const companyTd = document.createElement('td');
-        companyTd.textContent = contract.company;
-        companyTd.style.textAlign = 'center';
-        tr.appendChild(companyTd);
-        
-        const dateTd = document.createElement('td');
-        dateTd.textContent = formatDate(contract.date);
-        dateTd.style.textAlign = 'center';
-        tr.appendChild(dateTd);
-        
-        const statusTd = document.createElement('td');
-        statusTd.textContent = contract.status;
-        statusTd.style.textAlign = 'center';
-        tr.appendChild(statusTd);
-        
-        // 파일 열 생성
-        const fileTd = document.createElement('td');
-        fileTd.style.textAlign = 'center';
-
-        if (contract.file && contract.file.name) {
-            // 파일이 있는 경우
-            console.log('파일 정보:', contract.id, contract.file.name);
-            
-            // 파일 컨테이너 생성
-            const fileContainer = document.createElement('div');
-            fileContainer.className = 'file-container';
-            fileContainer.style.cursor = 'pointer';
-            fileContainer.style.display = 'flex';
-            fileContainer.style.flexDirection = 'column';
-            fileContainer.style.alignItems = 'center';
-            fileContainer.style.justifyContent = 'center';
-            fileContainer.style.padding = '5px';
-            fileContainer.style.width = '60px';
-            fileContainer.style.height = '60px';
-            fileContainer.style.margin = '0 auto';
-            fileContainer.style.border = '1px solid #eaeaea';
-            fileContainer.style.backgroundColor = '#f9f9f9';
-            fileContainer.style.borderRadius = '4px';
-            fileContainer.title = contract.file.name + ' (클릭하여 다운로드)';
-            
-            // 파일 확장자 추출
-            const fileExt = contract.file.name.split('.').pop().toLowerCase();
-            
-            // 파일 아이콘 정보 가져오기
-            const iconInfo = getFileIconInfo(contract.file.name);
-            
-            // 파일 아이콘 생성
-            const fileIcon = document.createElement('i');
-            fileIcon.className = iconInfo.className;
-            fileIcon.style.color = iconInfo.color;
-            fileIcon.style.fontSize = '20px';
-            fileIcon.style.marginBottom = '4px';    
-            
-            // 아이콘 추가
-            fileContainer.appendChild(fileIcon);
-            
-            // 파일명 표시
-            const fileName = document.createElement('span');
-            fileName.textContent = fileExt.toUpperCase();
-            fileName.style.fontSize = '8px';
-            fileName.style.fontWeight = 'bold';
-            fileName.style.color = '#444';
-            fileName.style.backgroundColor = '#f0f7ff';
-            fileName.style.padding = '2px 6px';
-            fileName.style.borderRadius = '4px';
-            fileContainer.appendChild(fileName);
-            
-            // 다운로드 이벤트 추가
-            fileContainer.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('파일 다운로드 시작:', contract.file.name);
-                downloadFile(contract.file);
-            });
-            
-            // 호버 효과 추가
-            fileContainer.addEventListener('mouseover', function() {
-                this.style.backgroundColor = '#f0f7ff';
-                this.style.borderColor = '#c0d6f9';
-                this.style.transform = 'translateY(-2px)';
-                this.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-            });
-            
-            fileContainer.addEventListener('mouseout', function() {
-                this.style.backgroundColor = '#f9f9f9';
-                this.style.borderColor = '#eaeaea';
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = 'none';
-            });
-            
-            fileTd.appendChild(fileContainer);
-        } else {
-            // 파일이 없는 경우
-            fileTd.textContent = '파일 없음';
-            fileTd.style.color = '#999';
-        }
-        
-        tr.appendChild(fileTd);
-        
-        // 수정 버튼 열 생성
-        const editTd = document.createElement('td');
-        editTd.style.textAlign = 'center';
-        
-        const editBtn = document.createElement('button');
-        editBtn.className = 'edit-btn';
-        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-        editBtn.title = '계약 수정';
-        editBtn.addEventListener('click', function() {
-            showEditContractModal(contract.id, year);
-        });
-
-        editTd.appendChild(editBtn);
-        tr.appendChild(editTd);
-        
-        // 삭제 버튼 열 생성
-        const deleteTd = document.createElement('td');
-        deleteTd.style.textAlign = 'center';
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'delete-btn';
-        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-        deleteBtn.title = '계약 삭제';
-        deleteBtn.addEventListener('click', function() {
-            if (confirm('정말로 이 계약을 삭제하시겠습니까?')) {
-                deleteContract(contract.id, year);
-            }
-        });
-        
-        deleteTd.appendChild(deleteBtn);
-        tr.appendChild(deleteTd);
-        
-        contractList.appendChild(tr);
-    });
-    
-    // 페이지네이션 생성
-    createPagination(totalPages, year);
-    
-    // 테이블 열 너비 조절 기능 초기화
-    setTimeout(initializeTableResizing, 100);
-    
-    // 계약 목록 로드 완료 이벤트 트리거
-    if (typeof triggerContractsLoaded === 'function') {
-        setTimeout(triggerContractsLoaded, 200);
-    }
-}
-
-// 페이지네이션 생성
-function createPagination(totalPages, year) {
-    const pagination = document.getElementById('pagination');
-    pagination.innerHTML = '';
-    
-    if (totalPages <= 1) {
-        return;
-    }
-    
-    // 이전 버튼
-    const prevButton = document.createElement('button');
-    prevButton.className = 'pagination-button' + (currentPage === 1 ? ' disabled' : '');
-    prevButton.textContent = '이전';
-    prevButton.addEventListener('click', function() {
-        if (currentPage > 1) {
-            currentPage--;
-            displayContracts(year);
-        }
-    });
-    pagination.appendChild(prevButton);
-    
-    // 페이지 번호
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    
-    // 시작 페이지 조정
-    if (endPage - startPage + 1 < maxVisiblePages) {
-        startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-    
-    // 첫 페이지 버튼
-    if (startPage > 1) {
-        const firstPageButton = document.createElement('button');
-        firstPageButton.className = 'pagination-button';
-        firstPageButton.textContent = '1';
-        firstPageButton.addEventListener('click', function() {
-            currentPage = 1;
-            displayContracts(year);
-        });
-        pagination.appendChild(firstPageButton);
-        
-        if (startPage > 2) {
-            const ellipsis = document.createElement('span');
-            ellipsis.className = 'pagination-ellipsis';
-            ellipsis.textContent = '...';
-            pagination.appendChild(ellipsis);
-        }
-    }
-    
-    // 페이지 번호 버튼
-    for (let i = startPage; i <= endPage; i++) {
-        const pageButton = document.createElement('button');
-        pageButton.className = 'pagination-button' + (i === currentPage ? ' active' : '');
-        pageButton.textContent = i;
-        pageButton.addEventListener('click', function() {
-            currentPage = i;
-            displayContracts(year);
-        });
-        pagination.appendChild(pageButton);
-    }
-    
-    // 마지막 페이지 버튼
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) {
-            const ellipsis = document.createElement('span');
-            ellipsis.className = 'pagination-ellipsis';
-            ellipsis.textContent = '...';
-            pagination.appendChild(ellipsis);
-        }
-        
-        const lastPageButton = document.createElement('button');
-        lastPageButton.className = 'pagination-button';
-        lastPageButton.textContent = totalPages;
-        lastPageButton.addEventListener('click', function() {
-            currentPage = totalPages;
-            displayContracts(year);
-        });
-        pagination.appendChild(lastPageButton);
-    }
-    
-    // 다음 버튼
-    const nextButton = document.createElement('button');
-    nextButton.className = 'pagination-button' + (currentPage === totalPages ? ' disabled' : '');
-    nextButton.textContent = '다음';
-    nextButton.addEventListener('click', function() {
-        if (currentPage < totalPages) {
-            currentPage++;
-            displayContracts(year);
-        }
-    });
-    pagination.appendChild(nextButton);
-}
-
-// 파일 업로드 처리
-function handleFileUpload(file, contractId, year) {
-    if (!file) return;
-    
-    // 파일 확장자 확인
-    const fileExt = file.name.split('.').pop().toLowerCase();
-    const allowedExtensions = ['docx', 'doc', 'pdf', 'xls', 'xlsx', 'ppt', 'pptx', 'hwp', 'txt'];
-    
-    if (!allowedExtensions.includes(fileExt)) {
-        alert('지원되는 파일 형식: docx, doc, pdf, xls, xlsx, ppt, pptx, hwp, txt');
-        return;
-    }
-    
-    // 파일 크기 제한 (20MB)
-    if (file.size > 20 * 1024 * 1024) {
-        alert('파일 크기는 20MB를 초과할 수 없습니다.');
-        return;
-    }
-    
-    // 파일을 Base64로 인코딩하여 저장
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const fileData = {
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            data: e.target.result
-        };
-        
-        // 해당 계약에 파일 정보 저장
-        const contractIndex = contracts[year].findIndex(c => c.id === contractId);
-        if (contractIndex !== -1) {
-            contracts[year][contractIndex].file = fileData;
-            localStorage.setItem('kbSecContracts', JSON.stringify(contracts));
-            
-            // 계약 목록 새로고침
-            loadContractsByYear(year);
-        }
-    };
-    
-    reader.onerror = function(error) {
-        console.error('파일 읽기 오류:', error);
-        alert('파일 읽기 중 오류가 발생했습니다.');
-    };
-    
-    reader.readAsDataURL(file);
-}
-
-// 파일 다운로드 함수
-function downloadFile(file) {
-    console.log('다운로드 함수 호출됨:', file.name);
-    
-    if (!file || !file.data) {
-        alert('다운로드할 파일이 없거나 손상되었습니다.');
-        return;
-    }
-    
-    try {
-        // 파일 데이터 확인
-        const fileData = file.data;
-        
-        // 다운로드 링크 생성
-        const link = document.createElement('a');
-        link.href = fileData;
-        link.download = file.name;
-        
-        // 문서에 링크 추가 및 클릭
-        document.body.appendChild(link);
-        
-        // 다운로드 실행
-        link.click();
-        
-        // 링크 제거
-        setTimeout(() => {
-            document.body.removeChild(link);
-            console.log('다운로드 완료:', file.name);
-        }, 100);
-    } catch (error) {
-        console.error('다운로드 오류:', error);
-        alert('파일 다운로드 중 오류가 발생했습니다.');
-    }
-}
-
-// 파일 확장자에 따른 MIME 타입 반환
-function getMimeType(fileName) {
-    const ext = fileName.split('.').pop().toLowerCase();
-    
-    switch (ext) {
-        case 'pdf': return 'application/pdf';
-        case 'doc': return 'application/msword';
-        case 'docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-        case 'xls': return 'application/vnd.ms-excel';
-        case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        case 'ppt': return 'application/vnd.ms-powerpoint';
-        case 'pptx': return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-        case 'hwp': return 'application/x-hwp';
-        case 'txt': return 'text/plain';
-        case 'jpg': case 'jpeg': return 'image/jpeg';
-        case 'png': return 'image/png';
-        case 'gif': return 'image/gif';
-        case 'zip': return 'application/zip';
-        case 'rar': return 'application/x-rar-compressed';
-        case '7z': return 'application/x-7z-compressed';
-        default: return 'application/octet-stream';
-    }
-}
-
-// 파일 삭제
-function deleteFile(contractId, year) {
-    if (confirm('파일을 삭제하시겠습니까?')) {
-        const contractIndex = contracts[year].findIndex(c => c.id === contractId);
-        if (contractIndex !== -1) {
-            delete contracts[year][contractIndex].file;
-            localStorage.setItem('kbSecContracts', JSON.stringify(contracts));
-            
-            // 계약 목록 새로고침
-            loadContractsByYear(year);
-        }
-    }
-}
-
-// 계약 추가 모달 표시
-function showAddContractModal() {
-    console.log('계약 추가 모달 표시 시작');
-    
-    // 모달 요소
-    const modal = document.getElementById('add-contract-modal');
-    const modalTitle = modal.querySelector('h2');
-    
-    // 모달 제목 설정
-    modalTitle.textContent = '계약 추가';
-    
-    // 폼 초기화
-    const form = document.getElementById('add-contract-form');
-    if (form) {
-        form.reset();
-    }
-    
-    // 파일 영역 초기화
-    const fileArea = document.getElementById('add-contract-file-area');
-    if (fileArea) {
-        fileArea.innerHTML = `
-            <i class="fas fa-cloud-upload-alt"></i>
-            <span>파일을 드래그하거나 클릭하여 업로드</span>
-            <input type="file" id="contract-file-input" class="file-upload-input" accept=".docx,.doc,.pdf,.xls,.xlsx,.ppt,.pptx,.hwp,.txt">
-        `;
-    }
-    
-    // 기존 이벤트 리스너 제거 (중복 방지)
-    if (form) {
-        // 기존 폼의 내용을 복제하되, 버튼 컨테이너는 제외
-        const newForm = document.createElement('form');
-        newForm.id = 'add-contract-form';
-        
-        // 원래 폼의 모든 자식 요소를 복사 (버튼 컨테이너 제외)
-        Array.from(form.children).forEach(child => {
-            // 버튼 컨테이너가 아닌 경우에만 복사
-            if (!child.classList || (!child.classList.contains('button-container') && child.tagName !== 'BUTTON')) {
-                newForm.appendChild(child.cloneNode(true));
-            }
-        });
-        
-        // 기존 폼을 새 폼으로 교체
-        form.parentNode.replaceChild(newForm, form);
-        
-        // 버튼 컨테이너 생성
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'button-container';
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.gap = '10px';
-        buttonContainer.style.justifyContent = 'center';
-        buttonContainer.style.marginTop = '20px';
-        
-        // 추가 버튼 추가
-        const addBtn = document.createElement('button');
-        addBtn.type = 'button';
-        addBtn.textContent = '추가';
-        addBtn.className = 'add-modal-btn';
-        addBtn.style.backgroundColor = '#0a2e5c';
-        addBtn.addEventListener('click', function() {
-            addContract();
-        });
-        
-        // 임시저장 버튼 추가
-        const tempSaveBtn = document.createElement('button');
-        tempSaveBtn.type = 'button';
-        tempSaveBtn.textContent = '임시저장';
-        tempSaveBtn.className = 'temp-save-modal-btn';
-        tempSaveBtn.style.backgroundColor = '#28a745';
-        tempSaveBtn.addEventListener('click', function() {
-            tempSaveContract();
-        });
-        
-        // 취소 버튼 추가
-        const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button';
-        cancelBtn.textContent = '취소';
-        cancelBtn.className = 'cancel-modal-btn';
-        cancelBtn.style.backgroundColor = '#6c757d';
-        cancelBtn.addEventListener('click', function() {
-            closeAddContractModal();
-        });
-        
-        // 버튼 추가
-        buttonContainer.appendChild(addBtn);
-        buttonContainer.appendChild(tempSaveBtn);
-        buttonContainer.appendChild(cancelBtn);
-        
-        // 폼에 버튼 컨테이너 추가
-        newForm.appendChild(buttonContainer);
-    }
-    
-    // 모달 표시
-    modal.style.display = 'block';
-    
-    // 데이터 속성 설정
-    modal.setAttribute('data-mode', 'add');
-    modal.removeAttribute('data-contract-id');
-    modal.removeAttribute('data-contract-year');
-    
-    // 파일 업로드 영역 이벤트 재설정
-    setTimeout(setupFileUploadArea, 100);
-    
-    console.log('계약 추가 모달 표시 완료');
-}
-
-// 계약 추가 모달 닫기
-function closeAddContractModal() {
-    document.getElementById('add-contract-modal').style.display = 'none';
-}
-
-// 계약 상세 모달 표시
-function showContractDetailModal(contractId, year) {
-    const contract = contracts[year].find(c => c.id === contractId);
-    if (contract) {
-        document.getElementById('detail-contract-name').textContent = contract.name;
-        document.getElementById('detail-contract-number').textContent = contract.contractNumber || '-';
-        document.getElementById('detail-contract-type').textContent = contract.type || '-';
-        document.getElementById('detail-company').textContent = contract.company;
-        document.getElementById('detail-date').textContent = formatDate(contract.date);
-        document.getElementById('detail-status').textContent = contract.status;
-        document.getElementById('detail-content').textContent = contract.details || '메모가 없습니다.';
-        
-        // 수정 및 삭제를 위한 데이터 속성 추가
-        const modal = document.getElementById('contract-detail-modal');
-        modal.setAttribute('data-contract-id', contractId);
-        modal.setAttribute('data-contract-year', year);
-        
-        modal.style.display = 'block';
-    }
-}
-
-// 계약 상세 모달 닫기
-function closeContractDetailModal() {
-    document.getElementById('contract-detail-modal').style.display = 'none';
-}
-
-// 계약번호 생성 함수
-function generateContractNumber(date) {
-    const contractDate = new Date(date);
-    const year = contractDate.getFullYear();
-    const month = String(contractDate.getMonth() + 1).padStart(2, '0');
-    const day = String(contractDate.getDate()).padStart(2, '0');
-    
-    // 해당 날짜의 일련번호 관리
-    const dateKey = `${year}${month}${day}`;
-    if (!contractNumbers[dateKey]) {
-        contractNumbers[dateKey] = 0;
-    }
-    
-    // 일련번호 증가
-    contractNumbers[dateKey]++;
-    const serialNumber = String(contractNumbers[dateKey]).padStart(3, '0');
-    
-    // 계약번호 형식: KB-YYYYMMDD-001
-    const contractNumber = `KB-${year}${month}${day}-${serialNumber}`;
-    
-    // 일련번호 저장
-    localStorage.setItem('kbSecContractNumbers', JSON.stringify(contractNumbers));
-    
-    return contractNumber;
 }
 
 // 계약 추가 처리
@@ -837,9 +266,6 @@ function addContract() {
         contracts[contractYear] = [];
     }
     
-    // 계약 ID 생성 (현재 시간 기준)
-    const contractId = Date.now().toString();
-    
     // 계약 번호 생성
     const contractNumber = generateContractNumber(date);
     
@@ -849,6 +275,21 @@ function addContract() {
     if (fileInput) {
         console.log('파일 입력 정보:', fileInput.id, fileInput.type, fileInput.files?.length);
     }
+    
+    // 계약 객체 생성 (기본 정보)
+    const contract = {
+        contractNumber: contractNumber,
+        name: name,
+        type: type,
+        company: company,
+        date: date,
+        status: status,
+        details: details,
+        department: currentUser.department,
+        createdBy: currentUser.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
     
     // 파일 데이터 처리
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
@@ -860,53 +301,44 @@ function addContract() {
             return;
         }
         
-        // 파일 읽기
-        const reader = new FileReader();
+        // 계약 ID 생성 (현재 시간 기준)
+        const contractId = Date.now().toString();
         
+        // 파일을 Base64로 인코딩하여 Firestore에 저장
+        const reader = new FileReader();
         reader.onload = function(e) {
-            console.log('파일 읽기 완료');
-            
-            // 파일 데이터 저장
-            const fileData = {
+            // 파일 데이터 저장 (Base64 형식)
+            contract.file = {
                 name: file.name,
                 type: file.type,
                 size: file.size,
                 data: e.target.result
             };
             
-            console.log('파일 데이터 생성:', file.name, '타입:', file.type);
-            
-            // 계약 객체 생성
-            const contract = {
-                id: contractId,
-                contractNumber: contractNumber,
-                name: name,
-                type: type,
-                company: company,
-                date: date,
-                status: status,
-                details: details,
-                department: currentUser.department,
-                createdAt: new Date().toISOString(),
-                file: fileData
-            };
-            
-            // 계약 배열에 추가
-            contracts[contractYear].push(contract);
-            
-            // 로컬 스토리지에 저장
-            localStorage.setItem('kbSecContracts', JSON.stringify(contracts));
-            
-            console.log('계약 추가 완료 (파일 포함)');
-            
-            // 모달 닫기
-            closeAddContractModal();
-            
-            // 현재 연도의 계약 목록 다시 로드
-            loadContractsByYear(contractYear);
-            
-            // 성공 메시지
-            alert('계약이 추가되었습니다.');
+            // Firestore에 계약 정보 저장
+            saveContractToFirestore(contract)
+                .then(docRef => {
+                    console.log('계약 추가 완료 (파일 포함):', docRef.id);
+                    
+                    // 계약 객체에 ID 추가
+                    contract.id = docRef.id;
+                    
+                    // 계약 배열에 추가
+                    contracts[contractYear].push(contract);
+                    
+                    // 모달 닫기
+                    closeAddContractModal();
+                    
+                    // 현재 연도의 계약 목록 다시 로드
+                    loadContractsByYear(contractYear.toString());
+                    
+                    // 성공 메시지
+                    alert('계약이 추가되었습니다.');
+                })
+                .catch(error => {
+                    console.error('계약 추가 오류:', error);
+                    alert('계약 추가 중 오류가 발생했습니다.');
+                });
         };
         
         reader.onerror = function(error) {
@@ -914,255 +346,64 @@ function addContract() {
             alert('파일 읽기 중 오류가 발생했습니다.');
         };
         
-        // 파일을 base64로 읽기
+        // 파일을 Base64로 인코딩
         reader.readAsDataURL(file);
     } else {
         // 파일 없이 계약 추가
-        const contract = {
-            id: contractId,
-            contractNumber: contractNumber,
-            name: name,
-            type: type,
-            company: company,
-            date: date,
-            status: status,
-            details: details,
-            department: currentUser.department,
-            createdAt: new Date().toISOString(),
-            file: null
-        };
-        
-        // 계약 배열에 추가
-        contracts[contractYear].push(contract);
-        
-        // 로컬 스토리지에 저장
-        localStorage.setItem('kbSecContracts', JSON.stringify(contracts));
-        
-        console.log('계약 추가 완료 (파일 없음)');
-        
-        // 모달 닫기
-        closeAddContractModal();
-        
-        // 현재 연도의 계약 목록 다시 로드
-        loadContractsByYear(contractYear);
-        
-        // 성공 메시지
-        alert('계약이 추가되었습니다.');
+        saveContractToFirestore(contract)
+            .then(docRef => {
+                console.log('계약 추가 완료 (파일 없음):', docRef.id);
+                
+                // 계약 객체에 ID 추가
+                contract.id = docRef.id;
+                
+                // 계약 배열에 추가
+                contracts[contractYear].push(contract);
+                
+                // 모달 닫기
+                closeAddContractModal();
+                
+                // 현재 연도의 계약 목록 다시 로드
+                loadContractsByYear(contractYear.toString());
+                
+                // 성공 메시지
+                alert('계약이 추가되었습니다.');
+            })
+            .catch(error => {
+                console.error('계약 추가 오류:', error);
+                alert('계약 추가 중 오류가 발생했습니다.');
+            });
     }
 }
 
-// 계약 추가 완료 처리
-function finishAddContract(newContract, year) {
-    try {
-        console.log(`${year}년 계약 추가 완료 처리 시작`);
-        console.log(`현재 ${year}년 계약 수:`, contracts[year].length);
-        
-        // 계약 추가
-        contracts[year].push(newContract);
-        console.log(`추가 후 ${year}년 계약 수:`, contracts[year].length);
-        
-        // 로컬 스토리지 업데이트
-        localStorage.setItem('kbSecContracts', JSON.stringify(contracts));
-        console.log('로컬 스토리지 업데이트 완료');
-        
-        alert('계약이 추가되었습니다.');
-        closeAddContractModal();
-        
-        // 폼 초기화
-        document.getElementById('add-contract-form').reset();
-        
-        // 계약 목록 새로고침
-        loadContractsByYear(year);
-    } catch (error) {
-        console.error('계약 추가 완료 처리 중 오류 발생:', error);
-        alert('계약 추가 완료 처리 중 오류가 발생했습니다.');
-    }
+// Firestore에 계약 정보 저장
+function saveContractToFirestore(contract) {
+    return firebase.firestore().collection('contracts').add(contract)
+        .then(docRef => {
+            console.log('Firestore에 계약 저장 완료:', docRef.id);
+            
+            // 계약 번호 데이터 업데이트
+            return firebase.firestore().collection('contractNumbers').doc('numbers').set(contractNumbers, { merge: true })
+                .then(() => {
+                    console.log('계약 번호 데이터 업데이트 완료');
+                    return docRef;
+                });
+        });
 }
 
-// 계약 수정 모달 표시
-function showEditContractModal(contractId, year) {
-    console.log('계약 수정 모달 표시 시작:', { contractId, year });
-    
-    const contract = contracts[year].find(c => c.id === contractId);
-    if (!contract) {
-        console.error('계약을 찾을 수 없음');
-        alert('수정할 계약을 찾을 수 없습니다.');
-        return;
-    }
-    
-    console.log('수정할 계약 정보:', contract);
-    
-    // 모달 요소
-    const modal = document.getElementById('add-contract-modal');
-    const modalTitle = modal.querySelector('h2');
-    
-    // 모달 제목 변경
-    modalTitle.textContent = '계약 수정';
-    
-    // 폼 필드에 기존 값 설정
-    document.getElementById('add-contract-name').value = contract.name || '';
-    document.getElementById('add-contract-type').value = contract.type || '매매계약';
-    document.getElementById('add-contract-company').value = contract.company || '';
-    document.getElementById('add-contract-date').value = contract.date || '';
-    document.getElementById('add-contract-status').value = contract.status || '법무검토 완료';
-    document.getElementById('add-contract-details').value = contract.details || '';
-    
-    // 파일 영역 업데이트
-    const fileArea = document.getElementById('add-contract-file-area');
-    if (fileArea) {
-        if (contract.file) {
-            // 파일 아이콘 정보 가져오기
-            const iconInfo = getFileIconInfo(contract.file.name);
-            
-            // 파일 크기 포맷팅
-            const fileSize = contract.file.size ? formatFileSize(contract.file.size) : '';
-            
-            // 파일 확장자 추출
-            const fileExt = contract.file.name.split('.').pop().toLowerCase();
-            
-            // 파일 정보 HTML 생성
-            fileArea.innerHTML = `
-                <div class="file-info">
-                    <i class="${iconInfo.className}" style="color: ${iconInfo.color}; font-size: 38px; margin-bottom: 10px;"></i>
-                    <span class="file-name" style="font-weight: 500; font-size: 14px; margin-bottom: 5px; display: block; text-align: center;">${contract.file.name}</span>
-                    <span class="file-ext" style="font-weight: bold; font-size: 12px; color: #0a2e5c; background-color: #f0f7ff; padding: 2px 6px; border-radius: 4px; margin-bottom: 5px;">${fileExt.toUpperCase()}</span>
-                    <span class="file-size" style="color: #666; font-size: 12px;">${fileSize}</span>
-                </div>
-            `;
-            
-            // 파일 입력 요소 추가 (숨김)
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.id = 'contract-file-input';
-            input.className = 'file-upload-input';
-            input.style.display = 'none';
-            input.accept = '.docx,.doc,.pdf,.xls,.xlsx,.ppt,.pptx,.hwp,.txt';
-            
-            // 기존 파일 데이터 설정 (가능한 경우)
-            try {
-                const response = fetch(contract.file.data)
-                    .then(res => res.blob())
-                    .then(blob => {
-                        const file = new File([blob], contract.file.name, { type: contract.file.type });
-                        const dataTransfer = new DataTransfer();
-                        dataTransfer.items.add(file);
-                        input.files = dataTransfer.files;
-                    })
-                    .catch(error => {
-                        console.error('파일 데이터 설정 오류:', error);
-                    });
-            } catch (error) {
-                console.error('파일 설정 시도 중 오류:', error);
-            }
-            
-            fileArea.appendChild(input);
-        } else {
-            fileArea.innerHTML = `
-                <i class="fas fa-cloud-upload-alt"></i>
-                <span>파일을 드래그하거나 클릭하여 업로드</span>
-                <input type="file" id="contract-file-input" class="file-upload-input" accept=".docx,.doc,.pdf,.xls,.xlsx,.ppt,.pptx,.hwp,.txt">
-            `;
-        }
-    }
-    
-    // 기존 이벤트 리스너 제거 및 새로운 이벤트 리스너 추가
-    const form = document.getElementById('add-contract-form');
-    if (form) {
-        // 기존 폼의 내용을 복제하되, 버튼 컨테이너는 제외
-        const newForm = document.createElement('form');
-        newForm.id = 'add-contract-form';
-        
-        // 원래 폼의 모든 자식 요소를 복사 (버튼 컨테이너 제외)
-        Array.from(form.children).forEach(child => {
-            // 버튼 컨테이너가 아닌 경우에만 복사
-            if (!child.classList || (!child.classList.contains('button-container') && child.tagName !== 'BUTTON')) {
-                newForm.appendChild(child.cloneNode(true));
-            }
-        });
-        
-        // 새 폼에 이벤트 리스너 추가
-        newForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            console.log('수정 폼 제출');
-            updateContract(contractId, year);
-        });
-        
-        // 기존 폼을 새 폼으로 교체
-        form.parentNode.replaceChild(newForm, form);
-        
-        // 버튼 컨테이너 생성
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'button-container';
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.gap = '10px';
-        buttonContainer.style.justifyContent = 'center';
-        buttonContainer.style.marginTop = '20px';
-        
-        // 수정 버튼 추가
-        const updateBtn = document.createElement('button');
-        updateBtn.type = 'button';
-        updateBtn.textContent = '수정';
-        updateBtn.className = 'edit-modal-btn';
-        updateBtn.addEventListener('click', function() {
-            updateContract(contractId, year);
-        });
-        
-        // 저장 버튼 추가
-        const saveBtn = document.createElement('button');
-        saveBtn.type = 'button';
-        saveBtn.textContent = '저장';
-        saveBtn.className = 'save-modal-btn';
-        saveBtn.style.backgroundColor = '#28a745';
-        saveBtn.addEventListener('click', function() {
-            saveContractFromModal(contract, year);
-        });
-        
-        // 취소 버튼 추가
-        const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button';
-        cancelBtn.textContent = '취소';
-        cancelBtn.className = 'cancel-modal-btn';
-        cancelBtn.style.backgroundColor = '#6c757d';
-        cancelBtn.addEventListener('click', function() {
-            closeAddContractModal();
-        });
-        
-        // 버튼 추가
-        buttonContainer.appendChild(updateBtn);
-        buttonContainer.appendChild(saveBtn);
-        buttonContainer.appendChild(cancelBtn);
-        
-        // 폼에 버튼 컨테이너 추가
-        newForm.appendChild(buttonContainer);
-    }
-    
-    // 모달 표시
-    modal.style.display = 'block';
-    
-    // 데이터 속성 추가
-    modal.setAttribute('data-mode', 'edit');
-    modal.setAttribute('data-contract-id', contractId);
-    modal.setAttribute('data-contract-year', year);
-    
-    // 파일 업로드 영역 이벤트 재설정
-    setTimeout(setupFileUploadArea, 100);
-    
-    console.log('계약 수정 모달 표시 완료');
-}
-
-// 계약 수정
-function updateContract(contractId, year) {
-    console.log('계약 수정 시작:', { contractId, year });
+// 계약 수정 처리
+function updateContract() {
+    console.log('계약 수정 시작');
     
     // 수정할 계약 찾기
-    const contractIndex = contracts[year].findIndex(c => c.id === contractId);
+    const contractIndex = contracts[selectedYear].findIndex(c => c.id === contractId);
     if (contractIndex === -1) {
         console.error('수정할 계약을 찾을 수 없음');
         alert('수정할 계약을 찾을 수 없습니다.');
         return;
     }
     
-    const oldContract = contracts[year][contractIndex];
+    const oldContract = contracts[selectedYear][contractIndex];
     console.log('기존 계약 정보:', oldContract);
     
     // 폼 데이터 가져오기
@@ -1222,7 +463,7 @@ function updateContract(contractId, year) {
             
             console.log('업데이트된 계약 정보:', updatedContract);
             console.log('파일 정보:', updatedContract.file ? updatedContract.file.name : '없음');
-            finishUpdateContract(updatedContract, contractIndex, year, newYear);
+            finishUpdateContract(updatedContract, contractIndex, selectedYear, newYear);
         };
         
         reader.onerror = function(error) {
@@ -1247,7 +488,7 @@ function updateContract(contractId, year) {
         
         console.log('기존 파일 유지, 업데이트된 계약 정보:', updatedContract);
         console.log('파일 정보:', updatedContract.file ? updatedContract.file.name : '없음');
-        finishUpdateContract(updatedContract, contractIndex, year, newYear);
+        finishUpdateContract(updatedContract, contractIndex, selectedYear, newYear);
     }
 }
 
@@ -1340,12 +581,15 @@ function deleteContract(contractId, year) {
             }
         }
         
-        const contract = contracts[year].find(c => c.id === contractId);
-        if (!contract) {
+        // 로컬 계약 데이터에서 계약 찾기
+        const contractIndex = contracts[year].findIndex(c => c.id === contractId);
+        if (contractIndex === -1) {
             console.error('삭제할 계약을 찾을 수 없음');
             alert('삭제할 계약을 찾을 수 없습니다.');
             return;
         }
+        
+        const contract = contracts[year][contractIndex];
         
         // 관리자이거나 자신의 부서 계약만 삭제 가능
         if (!currentUser.isAdmin && contract.department !== currentUser.department) {
@@ -1356,27 +600,30 @@ function deleteContract(contractId, year) {
         if (confirm('정말로 이 계약을 삭제하시겠습니까?')) {
             console.log('계약 삭제 확인됨');
             
-            // 계약 삭제
-            contracts[year] = contracts[year].filter(c => c.id !== contractId);
-            
-            // 로컬 스토리지 업데이트
-            localStorage.setItem('kbSecContracts', JSON.stringify(contracts));
-            
-            // 모달 닫기
-            closeContractDetailModal();
-            
-            // 계약 목록 새로고침
-            loadContractsByYear(year);
-            
-            alert('계약이 삭제되었습니다.');
-            
-            console.log('계약 삭제 완료');
-        } else {
-            console.log('계약 삭제 취소됨');
+            // Firestore에서 계약 삭제
+            firebase.firestore().collection('contracts').doc(contractId).delete()
+                .then(() => {
+                    console.log('Firestore에서 계약 삭제 완료');
+                    
+                    // 로컬 계약 데이터에서 삭제
+                    contracts[year].splice(contractIndex, 1);
+                    
+                    // 계약 목록 새로고침
+                    loadContractsByYear(year);
+                    
+                    // 상세 모달이 열려있는 경우 닫기
+                    closeContractDetailModal();
+                    
+                    alert('계약이 삭제되었습니다.');
+                })
+                .catch(error => {
+                    console.error('계약 삭제 오류:', error);
+                    alert('계약 삭제 중 오류가 발생했습니다.');
+                });
         }
     } catch (error) {
-        console.error('계약 삭제 중 오류:', error);
-        alert('계약 삭제 중 오류가 발생했습니다.');
+        console.error('계약 삭제 처리 중 오류:', error);
+        alert('계약 삭제 처리 중 오류가 발생했습니다.');
     }
 }
 
