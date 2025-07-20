@@ -2,6 +2,7 @@
 let currentUser = JSON.parse(localStorage.getItem('kbSecCurrentUser')) || null;
 let contracts = {};
 let contractNumbers = {};
+let selectedYear = new Date().getFullYear().toString();
 
 // 전역 변수로 페이지네이션 상태 관리
 let currentPage = 1;
@@ -11,46 +12,19 @@ const itemsPerPage = 30;
 document.addEventListener('DOMContentLoaded', function() {
     console.log('대시보드 페이지 로드됨');
     
-    // Firebase 인증 상태 확인
-    firebase.auth().onAuthStateChanged(function(user) {
-        if (user) {
-            console.log('Firebase 인증 상태:', user.uid);
-            // 사용자 정보 가져오기
-            firebase.firestore().collection('users').doc(user.uid).get()
-                .then((doc) => {
-                    if (doc.exists) {
-                        const userData = doc.data();
-                        console.log('Firebase 사용자 데이터:', userData);
-                        
-                        // 로컬 스토리지에 사용자 정보 업데이트
-                        currentUser = {
-                            id: userData.username,
-                            department: userData.department,
-                            name: userData.name,
-                            isAdmin: userData.isAdmin || false,
-                            uid: user.uid
-                        };
-                        localStorage.setItem('kbSecCurrentUser', JSON.stringify(currentUser));
-                        
-                        // 사용자 이름 표시
-                        document.getElementById('user-name').textContent = userData.name + ' (' + userData.department + ')';
-                        
-                        // 계약 데이터 로드
-                        loadContractsFromFirestore();
-                    } else {
-                        console.log('사용자 데이터가 없음');
-                        logout();
-                    }
-                })
-                .catch((error) => {
-                    console.error('사용자 데이터 로드 오류:', error);
-                    logout();
-                });
-        } else {
-            console.log('로그인되지 않음');
-            window.location.href = 'index.html';
-        }
-    });
+    // 로그인 상태 확인
+    if (currentUser) {
+        console.log('로그인 상태:', currentUser.id);
+        
+        // 사용자 이름 표시
+        document.getElementById('user-name').textContent = currentUser.name + ' (' + currentUser.department + ')';
+        
+        // 계약 데이터 로드
+        loadContractsFromLocalStorage();
+    } else {
+        console.log('로그인되지 않음');
+        window.location.href = 'index.html';
+    }
     
     // 이벤트 리스너 설정
     setupEventListeners();
@@ -161,82 +135,34 @@ function setupEventListeners() {
     setupFileUploadArea();
 }
 
-// Firestore에서 계약 데이터 로드
-function loadContractsFromFirestore() {
-    console.log('Firestore에서 계약 데이터 로드 시작');
+// 로컬 스토리지에서 계약 데이터 로드
+function loadContractsFromLocalStorage() {
+    console.log('로컬 스토리지에서 계약 데이터 로드 시작');
     
     // 계약 데이터 초기화
-    contracts = {};
+    contracts = JSON.parse(localStorage.getItem('kbSecContracts')) || {};
     
     // 계약 번호 데이터 로드
-    firebase.firestore().collection('contractNumbers').doc('numbers').get()
-        .then((doc) => {
-            if (doc.exists) {
-                contractNumbers = doc.data();
-                console.log('계약 번호 데이터 로드 완료');
-            } else {
-                contractNumbers = {};
-                console.log('계약 번호 데이터 없음, 초기화');
-                
-                // 계약 번호 데이터 생성
-                firebase.firestore().collection('contractNumbers').doc('numbers').set({});
-            }
-        })
-        .catch((error) => {
-            console.error('계약 번호 데이터 로드 오류:', error);
-            contractNumbers = {};
-        });
+    contractNumbers = JSON.parse(localStorage.getItem('kbSecContractNumbers')) || {};
     
-    // 계약 데이터 로드
-    firebase.firestore().collection('contracts')
-        .where('department', '==', currentUser.department)
-        .get()
-        .then((querySnapshot) => {
-            querySnapshot.forEach((doc) => {
-                const contract = doc.data();
-                const year = new Date(contract.date).getFullYear().toString();
-                
-                // 해당 연도의 배열이 없으면 초기화
-                if (!contracts[year]) {
-                    contracts[year] = [];
-                }
-                
-                // 계약 데이터에 ID 추가
-                contract.id = doc.id;
-                
-                // 계약 배열에 추가
-                contracts[year].push(contract);
-            });
-            
-            console.log('계약 데이터 로드 완료');
-            
-            // 연도 목록 생성
-            createYearList();
-            
-            // 최신 연도 선택
-            const years = Object.keys(contracts).sort((a, b) => b - a);
-            if (years.length > 0) {
-                loadContractsByYear(years[0]);
-            } else {
-                loadContractsByYear(new Date().getFullYear().toString());
-            }
-        })
-        .catch((error) => {
-            console.error('계약 데이터 로드 오류:', error);
-        });
+    console.log('계약 데이터 로드 완료');
+    
+    // 연도 목록 생성
+    createYearList();
+    
+    // 최신 연도 선택
+    const years = Object.keys(contracts).sort((a, b) => b - a);
+    if (years.length > 0) {
+        loadContractsByYear(years[0]);
+    } else {
+        loadContractsByYear(new Date().getFullYear().toString());
+    }
 }
 
 // 로그아웃 처리
 function logout() {
-    firebase.auth().signOut()
-        .then(() => {
-            localStorage.removeItem('kbSecCurrentUser');
-            window.location.href = 'index.html';
-        })
-        .catch((error) => {
-            console.error('로그아웃 오류:', error);
-            alert('로그아웃 중 오류가 발생했습니다.');
-        });
+    localStorage.removeItem('kbSecCurrentUser');
+    window.location.href = 'index.html';
 }
 
 // 계약 추가 처리
@@ -276,8 +202,12 @@ function addContract() {
         console.log('파일 입력 정보:', fileInput.id, fileInput.type, fileInput.files?.length);
     }
     
+    // 계약 ID 생성 (현재 시간 기준)
+    const contractId = Date.now().toString();
+    
     // 계약 객체 생성 (기본 정보)
     const contract = {
+        id: contractId,
         contractNumber: contractNumber,
         name: name,
         type: type,
@@ -286,9 +216,9 @@ function addContract() {
         status: status,
         details: details,
         department: currentUser.department,
-        createdBy: currentUser.uid,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdBy: currentUser.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
     };
     
     // 파일 데이터 처리
@@ -301,10 +231,7 @@ function addContract() {
             return;
         }
         
-        // 계약 ID 생성 (현재 시간 기준)
-        const contractId = Date.now().toString();
-        
-        // 파일을 Base64로 인코딩하여 Firestore에 저장
+        // 파일을 Base64로 인코딩하여 저장
         const reader = new FileReader();
         reader.onload = function(e) {
             // 파일 데이터 저장 (Base64 형식)
@@ -315,30 +242,20 @@ function addContract() {
                 data: e.target.result
             };
             
-            // Firestore에 계약 정보 저장
-            saveContractToFirestore(contract)
-                .then(docRef => {
-                    console.log('계약 추가 완료 (파일 포함):', docRef.id);
-                    
-                    // 계약 객체에 ID 추가
-                    contract.id = docRef.id;
-                    
-                    // 계약 배열에 추가
-                    contracts[contractYear].push(contract);
-                    
-                    // 모달 닫기
-                    closeAddContractModal();
-                    
-                    // 현재 연도의 계약 목록 다시 로드
-                    loadContractsByYear(contractYear.toString());
-                    
-                    // 성공 메시지
-                    alert('계약이 추가되었습니다.');
-                })
-                .catch(error => {
-                    console.error('계약 추가 오류:', error);
-                    alert('계약 추가 중 오류가 발생했습니다.');
-                });
+            // 계약 배열에 추가
+            contracts[contractYear].push(contract);
+            
+            // 로컬 스토리지에 저장
+            saveContractsToLocalStorage();
+            
+            // 모달 닫기
+            closeAddContractModal();
+            
+            // 현재 연도의 계약 목록 다시 로드
+            loadContractsByYear(contractYear.toString());
+            
+            // 성공 메시지
+            alert('계약이 추가되었습니다.');
         };
         
         reader.onerror = function(error) {
@@ -350,30 +267,28 @@ function addContract() {
         reader.readAsDataURL(file);
     } else {
         // 파일 없이 계약 추가
-        saveContractToFirestore(contract)
-            .then(docRef => {
-                console.log('계약 추가 완료 (파일 없음):', docRef.id);
-                
-                // 계약 객체에 ID 추가
-                contract.id = docRef.id;
-                
-                // 계약 배열에 추가
-                contracts[contractYear].push(contract);
-                
-                // 모달 닫기
-                closeAddContractModal();
-                
-                // 현재 연도의 계약 목록 다시 로드
-                loadContractsByYear(contractYear.toString());
-                
-                // 성공 메시지
-                alert('계약이 추가되었습니다.');
-            })
-            .catch(error => {
-                console.error('계약 추가 오류:', error);
-                alert('계약 추가 중 오류가 발생했습니다.');
-            });
+        // 계약 배열에 추가
+        contracts[contractYear].push(contract);
+        
+        // 로컬 스토리지에 저장
+        saveContractsToLocalStorage();
+        
+        // 모달 닫기
+        closeAddContractModal();
+        
+        // 현재 연도의 계약 목록 다시 로드
+        loadContractsByYear(contractYear.toString());
+        
+        // 성공 메시지
+        alert('계약이 추가되었습니다.');
     }
+}
+
+// 로컬 스토리지에 계약 정보 저장
+function saveContractsToLocalStorage() {
+    localStorage.setItem('kbSecContracts', JSON.stringify(contracts));
+    localStorage.setItem('kbSecContractNumbers', JSON.stringify(contractNumbers));
+    console.log('로컬 스토리지에 계약 데이터 저장 완료');
 }
 
 // Firestore에 계약 정보 저장
@@ -516,7 +431,7 @@ function finishUpdateContract(updatedContract, contractIndex, oldYear, newYear) 
     }
     
     // 로컬 스토리지에 저장
-    localStorage.setItem('kbSecContracts', JSON.stringify(contracts));
+    saveContractsToLocalStorage();
     
     console.log('계약 수정 완료:', updatedContract);
     
@@ -563,6 +478,24 @@ function editContract() {
     }
 }
 
+// 계약 번호 생성
+function generateContractNumber(dateString) {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    
+    // 해당 연월의 계약 번호 카운터 가져오기
+    const yearMonth = `${year}${month}`;
+    contractNumbers[yearMonth] = (contractNumbers[yearMonth] || 0) + 1;
+    
+    // 계약 번호 포맷: YYYYMM-XXXX (XXXX는 일련번호)
+    const counter = String(contractNumbers[yearMonth]).padStart(4, '0');
+    const contractNumber = `${yearMonth}-${counter}`;
+    
+    console.log('계약 번호 생성:', contractNumber);
+    return contractNumber;
+}
+
 // 계약 삭제
 function deleteContract(contractId, year) {
     console.log('계약 삭제 시작:', { contractId, year });
@@ -600,26 +533,19 @@ function deleteContract(contractId, year) {
         if (confirm('정말로 이 계약을 삭제하시겠습니까?')) {
             console.log('계약 삭제 확인됨');
             
-            // Firestore에서 계약 삭제
-            firebase.firestore().collection('contracts').doc(contractId).delete()
-                .then(() => {
-                    console.log('Firestore에서 계약 삭제 완료');
-                    
-                    // 로컬 계약 데이터에서 삭제
-                    contracts[year].splice(contractIndex, 1);
-                    
-                    // 계약 목록 새로고침
-                    loadContractsByYear(year);
-                    
-                    // 상세 모달이 열려있는 경우 닫기
-                    closeContractDetailModal();
-                    
-                    alert('계약이 삭제되었습니다.');
-                })
-                .catch(error => {
-                    console.error('계약 삭제 오류:', error);
-                    alert('계약 삭제 중 오류가 발생했습니다.');
-                });
+            // 로컬 계약 데이터에서 삭제
+            contracts[year].splice(contractIndex, 1);
+            
+            // 로컬 스토리지에 저장
+            saveContractsToLocalStorage();
+            
+            // 계약 목록 새로고침
+            loadContractsByYear(year);
+            
+            // 상세 모달이 열려있는 경우 닫기
+            closeContractDetailModal();
+            
+            alert('계약이 삭제되었습니다.');
         }
     } catch (error) {
         console.error('계약 삭제 처리 중 오류:', error);
@@ -1302,4 +1228,521 @@ function checkLogin() {
         console.log('로그인되지 않음, 로그인 페이지로 이동');
         window.location.href = 'index.html';
     }
+} 
+
+// 계약 추가 모달 표시
+function showAddContractModal() {
+    // 모달 초기화
+    document.getElementById('add-contract-form').reset();
+    
+    // 오늘 날짜 설정
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('add-contract-date').value = today;
+    
+    // 파일 업로드 영역 초기화
+    const fileArea = document.getElementById('add-contract-file-area');
+    if (fileArea) {
+        fileArea.innerHTML = `
+            <i class="fas fa-cloud-upload-alt"></i>
+            <span>파일을 드래그하거나 클릭하여 업로드</span>
+            <input type="file" id="contract-file-input" class="file-upload-input" accept=".docx,.doc,.pdf,.xls,.xlsx,.ppt,.pptx,.hwp,.txt">
+        `;
+    }
+    
+    // 파일 업로드 영역 이벤트 설정
+    setupFileUploadArea();
+    
+    // 모달 표시
+    document.getElementById('add-contract-modal').style.display = 'block';
+}
+
+// 계약 추가 모달 닫기
+function closeAddContractModal() {
+    document.getElementById('add-contract-modal').style.display = 'none';
+}
+
+// 계약 상세 모달 표시
+function showContractDetailModal(contract, year) {
+    // 모달에 계약 정보 설정
+    document.getElementById('detail-contract-name').textContent = contract.name;
+    document.getElementById('detail-contract-number').textContent = contract.contractNumber || '없음';
+    document.getElementById('detail-contract-type').textContent = contract.type || '없음';
+    document.getElementById('detail-company').textContent = contract.company || '없음';
+    document.getElementById('detail-date').textContent = formatDate(contract.date) || '없음';
+    document.getElementById('detail-status').textContent = contract.status || '없음';
+    document.getElementById('detail-content').textContent = contract.details || '없음';
+    
+    // 파일 정보 표시
+    const fileInfoElement = document.createElement('div');
+    fileInfoElement.classList.add('file-info-container');
+    
+    if (contract.file) {
+        const fileIconInfo = getFileIconInfo(contract.file.name);
+        const fileSize = formatFileSize(contract.file.size);
+        
+        fileInfoElement.innerHTML = `
+            <div class="file-info-detail">
+                <i class="${fileIconInfo.className}" style="color: ${fileIconInfo.color}; font-size: 24px; margin-right: 10px;"></i>
+                <div class="file-info-text">
+                    <div class="file-name">${contract.file.name}</div>
+                    <div class="file-size">${fileSize}</div>
+                </div>
+                <button class="file-download-btn" onclick="downloadContractFile('${contract.id}', '${year}')">
+                    <i class="fas fa-download"></i> 다운로드
+                </button>
+            </div>
+        `;
+    } else {
+        fileInfoElement.innerHTML = '<p>첨부된 파일이 없습니다.</p>';
+    }
+    
+    // 기존 파일 정보 요소 제거
+    const existingFileInfo = document.querySelector('.file-info-container');
+    if (existingFileInfo) {
+        existingFileInfo.remove();
+    }
+    
+    // 파일 정보 요소 추가
+    const detailContent = document.getElementById('detail-content');
+    detailContent.parentNode.insertBefore(fileInfoElement, detailContent.nextSibling);
+    
+    // 계약 ID와 연도 저장
+    const modal = document.getElementById('contract-detail-modal');
+    modal.setAttribute('data-contract-id', contract.id);
+    modal.setAttribute('data-contract-year', year);
+    
+    // 모달 표시
+    modal.style.display = 'block';
+}
+
+// 계약 상세 모달 닫기
+function closeContractDetailModal() {
+    document.getElementById('contract-detail-modal').style.display = 'none';
+}
+
+// 연도별 계약 목록 로드
+function loadContractsByYear(year) {
+    console.log('연도별 계약 목록 로드:', year);
+    
+    // 선택된 연도 표시
+    const yearLinks = document.querySelectorAll('#year-list a');
+    yearLinks.forEach(link => {
+        if (link.getAttribute('data-year') === year) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+    
+    // 선택된 연도 저장
+    selectedYear = year;
+    
+    // 제목 업데이트
+    document.getElementById('selected-year').textContent = year + '년 계약 목록';
+    
+    // 계약 목록 표시
+    displayContracts(year);
+}
+
+// 계약 목록 표시
+function displayContracts(year) {
+    console.log('계약 목록 표시:', year);
+    
+    // 계약 목록 가져오기
+    const yearContracts = contracts[year] || [];
+    
+    // 검색어
+    const searchInput = document.getElementById('search-input');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    
+    // 필터링
+    let filteredContracts = yearContracts;
+    
+    // 검색어로 필터링
+    if (searchTerm) {
+        filteredContracts = filteredContracts.filter(contract => {
+            return (
+                (contract.name && contract.name.toLowerCase().includes(searchTerm)) ||
+                (contract.company && contract.company.toLowerCase().includes(searchTerm)) ||
+                (contract.contractNumber && contract.contractNumber.toLowerCase().includes(searchTerm))
+            );
+        });
+    }
+    
+    // 필터 적용
+    const filterName = document.getElementById('filter-name').value;
+    const filterType = document.getElementById('filter-type').value;
+    const filterCompany = document.getElementById('filter-company').value;
+    const filterStatus = document.getElementById('filter-status').value;
+    
+    if (filterName) {
+        filteredContracts = filteredContracts.filter(contract => contract.name === filterName);
+    }
+    
+    if (filterType) {
+        filteredContracts = filteredContracts.filter(contract => contract.type === filterType);
+    }
+    
+    if (filterCompany) {
+        filteredContracts = filteredContracts.filter(contract => contract.company === filterCompany);
+    }
+    
+    if (filterStatus) {
+        filteredContracts = filteredContracts.filter(contract => contract.status === filterStatus);
+    }
+    
+    // 계약 목록 테이블 업데이트
+    updateContractTable(filteredContracts);
+}
+
+// 파일 다운로드
+function downloadContractFile(contractId, year) {
+    console.log('파일 다운로드 시작:', contractId, year);
+    
+    // 계약 찾기
+    const contract = contracts[year].find(c => c.id === contractId);
+    if (!contract || !contract.file) {
+        console.error('파일을 찾을 수 없음');
+        alert('파일을 찾을 수 없습니다.');
+        return;
+    }
+    
+    try {
+        // 파일 데이터 가져오기
+        const fileData = contract.file.data;
+        const fileName = contract.file.name;
+        
+        // 다운로드 링크 생성
+        const link = document.createElement('a');
+        link.href = fileData;
+        link.download = fileName;
+        
+        // 링크 클릭하여 다운로드 시작
+        document.body.appendChild(link);
+        link.click();
+        
+        // 링크 제거
+        document.body.removeChild(link);
+        
+        console.log('파일 다운로드 완료:', fileName);
+    } catch (error) {
+        console.error('파일 다운로드 오류:', error);
+        alert('파일 다운로드 중 오류가 발생했습니다.');
+    }
+}
+
+// 계약 목록 테이블 업데이트
+function updateContractTable(contracts) {
+    const tableBody = document.getElementById('contract-list');
+    if (!tableBody) return;
+    
+    // 테이블 초기화
+    tableBody.innerHTML = '';
+    
+    // 계약이 없는 경우
+    if (contracts.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="10" class="no-data">계약 정보가 없습니다.</td>';
+        tableBody.appendChild(row);
+        
+        // 페이지네이션 숨김
+        document.getElementById('pagination').innerHTML = '';
+        return;
+    }
+    
+    // 페이지네이션 계산
+    const totalPages = Math.ceil(contracts.length / itemsPerPage);
+    if (currentPage > totalPages) {
+        currentPage = 1;
+    }
+    
+    // 현재 페이지의 계약 목록
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, contracts.length);
+    const currentPageContracts = contracts.slice(startIndex, endIndex);
+    
+    // 계약 목록 표시
+    currentPageContracts.forEach((contract, index) => {
+        const row = document.createElement('tr');
+        
+        // 계약 상태에 따른 스타일 클래스
+        let statusClass = '';
+        if (contract.status === '법무검토 완료') {
+            statusClass = 'status-review';
+        } else if (contract.status === '체결 진행중') {
+            statusClass = 'status-progress';
+        } else if (contract.status === '체결 완료') {
+            statusClass = 'status-complete';
+        }
+        
+        // 파일 아이콘 HTML
+        let fileIconHtml = '-';
+        if (contract.file) {
+            const fileIconInfo = getFileIconInfo(contract.file.name);
+            fileIconHtml = `
+                <button class="file-download-btn" onclick="downloadContractFile('${contract.id}', '${selectedYear}')">
+                    <i class="${fileIconInfo.className}" style="color: ${fileIconInfo.color};"></i>
+                </button>
+            `;
+        }
+        
+        // 행 내용 설정
+        row.innerHTML = `
+            <td>${startIndex + index + 1}</td>
+            <td>${contract.contractNumber || '-'}</td>
+            <td class="contract-name">
+                <a href="#" onclick="showContractDetail('${contract.id}', '${selectedYear}'); return false;">
+                    ${contract.name}
+                </a>
+            </td>
+            <td>${contract.type || '-'}</td>
+            <td>${contract.company || '-'}</td>
+            <td>${formatDate(contract.date)}</td>
+            <td class="${statusClass}">${contract.status || '-'}</td>
+            <td>${fileIconHtml}</td>
+            <td>
+                <button class="edit-btn" onclick="showEditContractModal('${contract.id}', '${selectedYear}'); return false;">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </td>
+            <td>
+                <button class="delete-btn" onclick="deleteContract('${contract.id}', '${selectedYear}'); return false;">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+    
+    // 페이지네이션 업데이트
+    updatePagination(totalPages);
+}
+
+// 계약 상세 정보 표시
+function showContractDetail(contractId, year) {
+    console.log('계약 상세 정보 표시:', contractId, year);
+    
+    // 계약 찾기
+    const contract = contracts[year].find(c => c.id === contractId);
+    if (!contract) {
+        console.error('계약을 찾을 수 없음');
+        alert('계약 정보를 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 계약 상세 모달 표시
+    showContractDetailModal(contract, year);
+} 
+
+// 연도 목록 생성
+function createYearList() {
+    console.log('연도 목록 생성 시작');
+    
+    // 연도 목록 요소
+    const yearList = document.getElementById('year-list');
+    if (!yearList) return;
+    
+    // 연도 목록 초기화
+    yearList.innerHTML = '';
+    
+    // 현재 연도
+    const currentYear = new Date().getFullYear();
+    
+    // 계약 데이터에서 연도 목록 가져오기
+    const contractYears = Object.keys(contracts).map(Number).sort((a, b) => b - a);
+    
+    // 최근 15년 연도 목록 생성
+    for (let i = 0; i < 15; i++) {
+        const year = currentYear - i;
+        const yearStr = year.toString();
+        
+        // 연도 목록 항목 생성
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#';
+        a.textContent = yearStr + '년';
+        a.setAttribute('data-year', yearStr);
+        
+        // 계약이 있는 연도 강조
+        if (contractYears.includes(year)) {
+            a.classList.add('has-contracts');
+        }
+        
+        // 클릭 이벤트 설정
+        a.addEventListener('click', function(e) {
+            e.preventDefault();
+            loadContractsByYear(yearStr);
+        });
+        
+        // 목록에 추가
+        li.appendChild(a);
+        yearList.appendChild(li);
+        
+        // 해당 연도의 계약 배열이 없으면 초기화
+        if (!contracts[yearStr]) {
+            contracts[yearStr] = [];
+        }
+    }
+    
+    console.log('연도 목록 생성 완료');
+}
+
+// 페이지네이션 업데이트
+function updatePagination(totalPages) {
+    const pagination = document.getElementById('pagination');
+    if (!pagination) return;
+    
+    // 페이지네이션 초기화
+    pagination.innerHTML = '';
+    
+    // 페이지가 1페이지인 경우 페이지네이션 표시하지 않음
+    if (totalPages <= 1) return;
+    
+    // 이전 페이지 버튼
+    if (currentPage > 1) {
+        const prevBtn = document.createElement('a');
+        prevBtn.href = '#';
+        prevBtn.textContent = '이전';
+        prevBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            currentPage--;
+            displayContracts(selectedYear);
+        });
+        pagination.appendChild(prevBtn);
+    }
+    
+    // 페이지 번호
+    const maxPageButtons = 5;
+    const startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+    const endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('a');
+        pageBtn.href = '#';
+        pageBtn.textContent = i;
+        
+        if (i === currentPage) {
+            pageBtn.classList.add('active');
+        }
+        
+        pageBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            currentPage = i;
+            displayContracts(selectedYear);
+        });
+        
+        pagination.appendChild(pageBtn);
+    }
+    
+    // 다음 페이지 버튼
+    if (currentPage < totalPages) {
+        const nextBtn = document.createElement('a');
+        nextBtn.href = '#';
+        nextBtn.textContent = '다음';
+        nextBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            currentPage++;
+            displayContracts(selectedYear);
+        });
+        pagination.appendChild(nextBtn);
+    }
+}
+
+// 필터 적용
+function applyFilters() {
+    displayContracts(selectedYear);
+}
+
+// 필터 초기화
+function resetFilters() {
+    // 필터 초기화
+    document.getElementById('filter-name').value = '';
+    document.getElementById('filter-type').value = '';
+    document.getElementById('filter-company').value = '';
+    document.getElementById('filter-status').value = '';
+    
+    // 검색어 초기화
+    document.getElementById('search-input').value = '';
+    
+    // 계약 목록 다시 표시
+    displayContracts(selectedYear);
+} 
+
+// 계약 수정 모달 표시
+function showEditContractModal(contractId, year) {
+    console.log('계약 수정 모달 표시:', contractId, year);
+    
+    // 계약 찾기
+    const contract = contracts[year].find(c => c.id === contractId);
+    if (!contract) {
+        console.error('수정할 계약을 찾을 수 없음');
+        alert('수정할 계약 정보를 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 계약 ID 저장
+    contractId = contract.id;
+    selectedYear = year;
+    
+    // 계약 추가 모달 재사용
+    const modal = document.getElementById('add-contract-modal');
+    
+    // 모달 제목 변경
+    modal.querySelector('h2').textContent = '계약 수정';
+    
+    // 폼 데이터 설정
+    document.getElementById('add-contract-name').value = contract.name || '';
+    document.getElementById('add-contract-type').value = contract.type || '매매계약';
+    document.getElementById('add-contract-company').value = contract.company || '';
+    document.getElementById('add-contract-date').value = contract.date ? new Date(contract.date).toISOString().split('T')[0] : '';
+    document.getElementById('add-contract-status').value = contract.status || '법무검토 완료';
+    document.getElementById('add-contract-details').value = contract.details || '';
+    
+    // 파일 업로드 영역 초기화
+    const fileArea = document.getElementById('add-contract-file-area');
+    if (fileArea) {
+        if (contract.file) {
+            // 기존 파일 정보 표시
+            const fileIconInfo = getFileIconInfo(contract.file.name);
+            const fileSize = formatFileSize(contract.file.size);
+            
+            fileArea.innerHTML = `
+                <div class="file-info">
+                    <i class="${fileIconInfo.className}" style="color: ${fileIconInfo.color}; font-size: 38px; margin-bottom: 10px;"></i>
+                    <span class="file-name" style="font-weight: 500; font-size: 14px; margin-bottom: 5px; display: block; text-align: center;">${contract.file.name}</span>
+                    <span class="file-size" style="color: #666; font-size: 12px;">${fileSize}</span>
+                    <p style="margin-top: 10px; font-size: 12px; color: #666;">다른 파일로 변경하려면 클릭하세요.</p>
+                </div>
+            `;
+            
+            // 파일 입력 요소 추가 (숨김)
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.id = 'contract-file-input';
+            input.className = 'file-upload-input';
+            input.style.display = 'none';
+            input.accept = '.docx,.doc,.pdf,.xls,.xlsx,.ppt,.pptx,.hwp,.txt';
+            fileArea.appendChild(input);
+        } else {
+            // 파일 없음 - 기본 업로드 영역 표시
+            fileArea.innerHTML = `
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>파일을 드래그하거나 클릭하여 업로드</span>
+                <input type="file" id="contract-file-input" class="file-upload-input" accept=".docx,.doc,.pdf,.xls,.xlsx,.ppt,.pptx,.hwp,.txt">
+            `;
+        }
+    }
+    
+    // 파일 업로드 영역 이벤트 설정
+    setupFileUploadArea();
+    
+    // 제출 버튼 텍스트 변경
+    const submitButton = modal.querySelector('button[type="submit"]');
+    if (submitButton) {
+        submitButton.textContent = '수정';
+    }
+    
+    // 모달 표시
+    modal.style.display = 'block';
 } 

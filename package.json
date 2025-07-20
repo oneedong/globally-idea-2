@@ -1,13 +1,12 @@
 {
   "name": "kb-contract-system",
   "version": "1.0.0",
-  "description": "KB 증권 계약서 관리 시스템",
-  "main": "script.js",
+  "description": "KB증권 계약 관리 시스템",
+  "main": "index.html",
   "scripts": {
     "start": "serve"
   },
   "dependencies": {
-    "firebase": "^12.0.0",
     "serve": "^14.0.0"
   }
 }
