@@ -2,6 +2,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('로그인 페이지 로드');
     
+    // 초기 디버깅: 저장된 사용자 데이터 확인
+    const usersData = localStorage.getItem('kbSecUsers');
+    console.log('초기 로드 시 저장된 사용자 데이터:', usersData);
+    
     // 로그인 폼 이벤트 리스너
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
@@ -98,16 +102,35 @@ function login() {
     }
     
     // 사용자 등록 여부 확인 (로컬 스토리지에서)
-    const users = JSON.parse(localStorage.getItem('kbSecUsers')) || {};
+    const usersStr = localStorage.getItem('kbSecUsers');
+    console.log('저장된 사용자 데이터(문자열):', usersStr);
     
-    if (users[username]) {
+    let users = [];
+    
+    try {
+        if (usersStr && usersStr !== "undefined" && usersStr !== "null") {
+            users = JSON.parse(usersStr);
+        }
+    } catch (e) {
+        console.error('사용자 데이터 파싱 오류:', e);
+        users = [];
+    }
+    
+    console.log('파싱된 사용자 데이터(배열):', users);
+    
+    // 배열에서 사용자 찾기
+    const foundUser = users.find(user => user.id === username);
+    console.log('찾은 사용자:', foundUser);
+    
+    if (foundUser) {
         // 비밀번호 확인
-        if (users[username].password === password) {
+        if (foundUser.password === password) {
             // 로그인 성공
             localStorage.setItem('kbSecCurrentUser', JSON.stringify({
-                id: username,
-                department: users[username].department,
-                name: users[username].name
+                id: foundUser.id,
+                department: foundUser.department,
+                name: foundUser.id,
+                isAdmin: foundUser.isAdmin || false
             }));
             
             // 대시보드로 이동
@@ -116,6 +139,7 @@ function login() {
             alert('비밀번호가 일치하지 않습니다.');
         }
     } else {
+        console.error('사용자를 찾을 수 없음:', username);
         alert('존재하지 않는 아이디입니다.');
     }
 }
@@ -139,29 +163,62 @@ function register() {
     }
     
     // 사용자 데이터 가져오기
-    const users = JSON.parse(localStorage.getItem('kbSecUsers')) || {};
+    let users = [];
+    const usersStr = localStorage.getItem('kbSecUsers');
+    
+    console.log('회원가입 전 저장된 사용자 데이터:', usersStr);
+    
+    if (usersStr && usersStr !== "undefined" && usersStr !== "null") {
+        try {
+            users = JSON.parse(usersStr);
+            // 배열이 아닌 경우 빈 배열로 초기화
+            if (!Array.isArray(users)) {
+                console.warn('사용자 데이터가 배열이 아닙니다. 배열로 초기화합니다.');
+                users = [];
+            }
+        } catch (e) {
+            console.error('사용자 데이터 파싱 오류:', e);
+            users = [];
+        }
+    }
+    
+    console.log('회원가입 전 파싱된 사용자 데이터:', users);
     
     // 아이디 중복 확인
-    if (users[username]) {
+    const existingUser = users.find(user => user.id === username);
+    if (existingUser) {
         alert('이미 사용 중인 아이디입니다.');
         return;
     }
     
-    // 사용자 정보 저장
-    users[username] = {
-        department: department,
-        name: username,
+    // 사용자 정보 생성 (배열에 추가)
+    const newUser = {
+        id: username,
         password: password,
+        department: department,
         createdAt: new Date().toISOString()
     };
     
+    // 배열에 새 사용자 추가
+    users.push(newUser);
+    
     // 로컬 스토리지에 저장
-    localStorage.setItem('kbSecUsers', JSON.stringify(users));
+    const usersJson = JSON.stringify(users);
+    localStorage.setItem('kbSecUsers', usersJson);
+    
+    console.log('회원가입 후 저장된 사용자 데이터:', usersJson);
+    console.log('저장 후 로컬스토리지 확인:', localStorage.getItem('kbSecUsers'));
     
     alert('회원가입이 완료되었습니다. 로그인해주세요.');
     
     // 모달 닫기
     closeRegisterModal();
+    
+    // 회원가입 폼 초기화
+    document.getElementById('register-department').value = '';
+    document.getElementById('register-id').value = '';
+    document.getElementById('register-password').value = '';
+    document.getElementById('register-password-confirm').value = '';
 }
 
 // 빠른 계약 상태 조회 (로그인 페이지에서)
@@ -272,4 +329,4 @@ function showContractCheckModal() {
 // 계약 상태 조회 모달 닫기
 function closeContractCheckModal() {
     document.getElementById('contract-check-modal').style.display = 'none';
-} 
+}
