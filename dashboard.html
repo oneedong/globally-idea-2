@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KB증권 세일즈 계약 관리 시스템</title>
+    <title>KB증권 계약 관리 시스템</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- FontAwesome 최신 버전으로 업데이트 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+          integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
     <div class="container">
@@ -22,7 +25,7 @@
         </header>
         
         <div class="content">
-            <aside class="sidebar">
+            <aside class="sidebar" style="resize: horizontal; overflow: auto;">
                 <h2>계약 연도</h2>
                 <ul id="year-list">
                     <!-- 연도 목록은 JavaScript로 동적 생성됩니다 -->
@@ -73,6 +76,18 @@
                         <button onclick="resetFilters()" class="reset-filters-btn">필터 초기화</button>
                     </div>
                     <table id="contract-table">
+                        <colgroup>
+                            <col style="width: 40px;">  <!-- No. -->
+                            <col style="width: 110px;"> <!-- 계약번호 -->
+                            <col style="width: 180px;"> <!-- 계약명 -->
+                            <col style="width: 90px;">  <!-- 계약 종류 -->
+                            <col style="width: 130px;"> <!-- 거래 상대방 -->
+                            <col style="width: 90px;">  <!-- 체결일자 -->
+                            <col style="width: 90px;">  <!-- 체결 현황 -->
+                            <col style="width: 70px;">  <!-- 계약서 -->
+                            <col style="width: 50px;">  <!-- 수정 -->
+                            <col style="width: 50px;">  <!-- 삭제 -->
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>No.</th>
@@ -150,7 +165,7 @@
                     <div class="file-upload-area" id="add-contract-file-area">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <span>파일을 드래그하거나 클릭하여 업로드</span>
-                        <input type="file" id="contract-file-input" class="file-upload-input" accept=".docx,.pdf">
+                        <input type="file" id="contract-file-input" class="file-upload-input" accept=".docx,.doc,.pdf,.xls,.xlsx,.ppt,.pptx,.hwp,.txt">
                     </div>
                 </div>
                 <button type="submit">추가</button>
@@ -180,5 +195,76 @@
     </div>
 
     <script src="dashboard.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-colresizable@1.6.0/colResizable-1.6.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // 테이블 열 너비 조절 기능 초기화
+            setTimeout(function() {
+                try {
+                    console.log('colResizable 초기화 시작');
+                    $("#contract-table").colResizable({
+                        liveDrag: true,
+                        gripInnerHtml: "<div class='grip'></div>",
+                        draggingClass: "dragging",
+                        resizeMode: 'fit',
+                        minWidth: 50,
+                        headerOnly: true,
+                        onResize: function() {
+                            console.log('열 너비 조정됨');
+                        }
+                    });
+                    console.log('colResizable 초기화 완료');
+                } catch (error) {
+                    console.error('colResizable 초기화 오류:', error);
+                }
+            }, 1000);
+            
+            // 계약 목록이 변경될 때마다 테이블 열 너비 조절 기능 재초기화
+            $(document).on('contractsLoaded', function() {
+                try {
+                    console.log('계약 목록 로드 후 colResizable 재초기화');
+                    // 기존 colResizable 제거
+                    $("#contract-table").colResizable({ disable: true });
+                    
+                    // 새로 초기화
+                    $("#contract-table").colResizable({
+                        liveDrag: true,
+                        gripInnerHtml: "<div class='grip'></div>",
+                        draggingClass: "dragging",
+                        resizeMode: 'fit',
+                        minWidth: 50,
+                        headerOnly: true
+                    });
+                } catch (error) {
+                    console.error('colResizable 재초기화 오류:', error);
+                }
+            });
+        });
+        
+        // 계약 목록 로드 완료 이벤트 트리거 함수 (dashboard.js에서 호출)
+        function triggerContractsLoaded() {
+            $(document).trigger('contractsLoaded');
+        }
+    </script>
+    <style>
+        .grip {
+            width: 10px;
+            height: 30px;
+            margin-top: -5px;
+            background-color: #ddd;
+            border-left: 1px solid #ddd;
+            border-right: 1px solid #ddd;
+            cursor: col-resize;
+        }
+        
+        .dragging .grip {
+            background-color: #007bff;
+        }
+        
+        #contract-table {
+            table-layout: fixed;
+        }
+    </style>
 </body>
 </html> 
