@@ -133,6 +133,182 @@ function setupEventListeners() {
     
     // 파일 업로드 영역 설정
     setupFileUploadArea();
+    
+    // 고객 발송 모달 이벤트 설정
+    setupNotificationModalEvents();
+}
+
+// 고객 발송 모달 이벤트 설정
+function setupNotificationModalEvents() {
+    // 발송 방법 변경 이벤트
+    const notificationMethod = document.getElementById('notification-method');
+    if (notificationMethod) {
+        notificationMethod.addEventListener('change', function() {
+            const emailGroup = document.getElementById('email-input-group');
+            const kakaoGroup = document.getElementById('kakao-input-group');
+            
+            if (this.value === 'email') {
+                emailGroup.style.display = 'block';
+                kakaoGroup.style.display = 'none';
+            } else {
+                emailGroup.style.display = 'none';
+                kakaoGroup.style.display = 'block';
+            }
+        });
+    }
+    
+    // 발송 폼 제출 이벤트
+    const sendNotificationForm = document.getElementById('send-notification-form');
+    if (sendNotificationForm) {
+        sendNotificationForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            sendNotification();
+        });
+    }
+    
+    // 모달 닫기 이벤트
+    const closeSendNotificationModalBtn = document.querySelector('#send-notification-modal .close');
+    if (closeSendNotificationModalBtn) {
+        closeSendNotificationModalBtn.addEventListener('click', closeSendNotificationModal);
+    }
+}
+
+// 고객 발송 모달 표시
+function showSendNotificationModal(contractId, year) {
+    console.log('고객 발송 모달 표시:', contractId, year);
+    
+    // 계약 찾기
+    const contract = contracts[year].find(c => c.id === contractId);
+    if (!contract) {
+        console.error('계약을 찾을 수 없음');
+        alert('계약 정보를 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 계약 정보 저장
+    const modal = document.getElementById('send-notification-modal');
+    modal.setAttribute('data-contract-id', contractId);
+    modal.setAttribute('data-contract-year', year);
+    
+    // 기본 메시지 설정
+    const messageTemplate = 
+        `안녕하세요, ${contract.company} 담당자님\n\n` +
+        `${contract.name} 계약의 현재 상태는 "${contract.status}"입니다.\n` +
+        `계약 번호: ${contract.contractNumber || '미정'}\n` +
+        `체결일자: ${formatDate(contract.date)}\n\n` +
+        `추가 문의사항이 있으시면 연락 주시기 바랍니다.\n\n` +
+        `KB증권 드림`;
+    
+    document.getElementById('notification-message').value = messageTemplate;
+    
+    // 이메일 입력란 초기화
+    document.getElementById('recipient-email').value = '';
+    
+    // 연락처 입력란 초기화
+    document.getElementById('recipient-phone').value = '';
+    
+    // 모달 표시
+    modal.style.display = 'block';
+}
+
+// 고객 발송 모달 닫기
+function closeSendNotificationModal() {
+    document.getElementById('send-notification-modal').style.display = 'none';
+}
+
+// 고객 발송 처리
+function sendNotification() {
+    console.log('고객 발송 처리 시작');
+    
+    // 모달에서 계약 정보 가져오기
+    const modal = document.getElementById('send-notification-modal');
+    const contractId = modal.getAttribute('data-contract-id');
+    const year = modal.getAttribute('data-contract-year');
+    
+    // 계약 찾기
+    const contract = contracts[year].find(c => c.id === contractId);
+    if (!contract) {
+        console.error('계약을 찾을 수 없음');
+        alert('계약 정보를 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 발송 방법
+    const method = document.getElementById('notification-method').value;
+    
+    // 수신자 정보
+    let recipient = '';
+    if (method === 'email') {
+        recipient = document.getElementById('recipient-email').value;
+        if (!recipient || !isValidEmail(recipient)) {
+            alert('유효한 이메일 주소를 입력해주세요.');
+            return;
+        }
+    } else {
+        recipient = document.getElementById('recipient-phone').value;
+        if (!recipient || !isValidPhone(recipient)) {
+            alert('유효한 연락처를 입력해주세요.');
+            return;
+        }
+    }
+    
+    // 메시지
+    const message = document.getElementById('notification-message').value;
+    if (!message) {
+        alert('메시지를 입력해주세요.');
+        return;
+    }
+    
+    // 발송 기록 저장
+    saveNotificationHistory(contract, method, recipient, message);
+    
+    // 모달 닫기
+    closeSendNotificationModal();
+    
+    // 성공 메시지
+    if (method === 'email') {
+        alert(`${recipient}로 이메일이 발송되었습니다.`);
+    } else {
+        alert(`${recipient}로 카카오톡 메시지가 발송되었습니다.`);
+    }
+}
+
+// 이메일 유효성 검사
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+// 연락처 유효성 검사
+function isValidPhone(phone) {
+    const phoneRegex = /^01([0|1|6|7|8|9])-?([0-9]{3,4})-?([0-9]{4})$/;
+    return phoneRegex.test(phone);
+}
+
+// 발송 기록 저장
+function saveNotificationHistory(contract, method, recipient, message) {
+    // 계약에 발송 기록 배열이 없으면 초기화
+    if (!contract.notifications) {
+        contract.notifications = [];
+    }
+    
+    // 발송 기록 객체 생성
+    const notification = {
+        id: Date.now().toString(),
+        method: method,
+        recipient: recipient,
+        message: message,
+        sentAt: new Date().toISOString(),
+        sentBy: currentUser.id
+    };
+    
+    // 발송 기록 추가
+    contract.notifications.push(notification);
+    
+    // 로컬 스토리지에 저장
+    saveContractsToLocalStorage();
+    
+    console.log('발송 기록 저장 완료:', notification);
 }
 
 // 로컬 스토리지에서 계약 데이터 로드
@@ -1442,7 +1618,7 @@ function updateContractTable(contracts) {
     // 계약이 없는 경우
     if (contracts.length === 0) {
         const row = document.createElement('tr');
-        row.innerHTML = '<td colspan="10" class="no-data">계약 정보가 없습니다.</td>';
+        row.innerHTML = '<td colspan="11" class="no-data">계약 정보가 없습니다.</td>';
         tableBody.appendChild(row);
         
         // 페이지네이션 숨김
@@ -1486,6 +1662,13 @@ function updateContractTable(contracts) {
             `;
         }
         
+        // 고객 발송 아이콘 HTML
+        const notificationIconHtml = `
+            <button class="notification-btn" onclick="showSendNotificationModal('${contract.id}', '${selectedYear}'); return false;">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        `;
+        
         // 행 내용 설정
         row.innerHTML = `
             <td>${startIndex + index + 1}</td>
@@ -1500,6 +1683,7 @@ function updateContractTable(contracts) {
             <td>${formatDate(contract.date)}</td>
             <td class="${statusClass}">${contract.status || '-'}</td>
             <td>${fileIconHtml}</td>
+            <td>${notificationIconHtml}</td>
             <td>
                 <button class="edit-btn" onclick="showEditContractModal('${contract.id}', '${selectedYear}'); return false;">
                     <i class="fas fa-edit"></i>

@@ -1295,3 +1295,106 @@ input[type="date"] {
     align-items: center;
     padding: 10px;
 } 
+
+/* 고객 발송 버튼 스타일 */
+.notification-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #1e88e5;
+    font-size: 16px;
+    padding: 5px;
+    transition: all 0.2s ease;
+}
+
+.notification-btn:hover {
+    color: #0d47a1;
+    transform: scale(1.1);
+}
+
+.notification-btn i {
+    margin-right: 0;
+}
+
+/* 고객 발송 모달 스타일 */
+#send-notification-modal .modal-content {
+    max-width: 500px;
+}
+
+#send-notification-form .form-group {
+    margin-bottom: 15px;
+}
+
+#notification-method {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+#recipient-email,
+#recipient-phone {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+#notification-message {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+}
+
+/* 발송 방법 아이콘 스타일 */
+.notification-method-icon {
+    margin-right: 5px;
+    font-size: 14px;
+}
+
+/* 발송 내역 스타일 */
+.notification-history {
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+
+.notification-history h4 {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.notification-item {
+    padding: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-item .notification-date {
+    color: #666;
+    font-size: 12px;
+}
+
+.notification-item .notification-method {
+    font-weight: bold;
+    color: #1e88e5;
+}
+
+.notification-item .notification-recipient {
+    color: #333;
+}
+
+/* 이메일 아이콘 스타일 */
+.email-icon {
+    color: #d32f2f;
+}
+
+/* 카카오톡 아이콘 스타일 */
+.kakao-icon {
+    color: #f9a825;
+} 

@@ -85,6 +85,7 @@
                             <col style="width: 90px;">  <!-- 체결일자 -->
                             <col style="width: 90px;">  <!-- 체결 현황 -->
                             <col style="width: 70px;">  <!-- 계약서 -->
+                            <col style="width: 70px;">  <!-- 고객 발송 -->
                             <col style="width: 50px;">  <!-- 수정 -->
                             <col style="width: 50px;">  <!-- 삭제 -->
                         </colgroup>
@@ -98,6 +99,7 @@
                                 <th>체결일자</th>
                                 <th>체결 현황</th>
                                 <th>계약서</th>
+                                <th>고객 발송</th>
                                 <th>수정</th>
                                 <th>삭제</th>
                             </tr>
@@ -191,6 +193,36 @@
                 <button onclick="editContract()">수정</button>
                 <button onclick="deleteContract()">삭제</button>
             </div>
+        </div>
+    </div>
+
+    <!-- 고객 발송 모달 -->
+    <div id="send-notification-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSendNotificationModal()">&times;</span>
+            <h2>고객 발송</h2>
+            <form id="send-notification-form">
+                <div class="form-group">
+                    <label for="notification-method">발송 방법</label>
+                    <select id="notification-method" required>
+                        <option value="email">이메일</option>
+                        <option value="kakao">카카오톡</option>
+                    </select>
+                </div>
+                <div class="form-group" id="email-input-group">
+                    <label for="recipient-email">수신자 이메일</label>
+                    <input type="email" id="recipient-email" placeholder="이메일 주소 입력">
+                </div>
+                <div class="form-group" id="kakao-input-group" style="display: none;">
+                    <label for="recipient-phone">수신자 연락처</label>
+                    <input type="tel" id="recipient-phone" placeholder="연락처 입력 (예: 010-1234-5678)">
+                </div>
+                <div class="form-group">
+                    <label for="notification-message">메시지</label>
+                    <textarea id="notification-message" rows="4" placeholder="고객에게 전달할 메시지를 입력하세요"></textarea>
+                </div>
+                <button type="submit">발송</button>
+            </form>
         </div>
     </div>
 
