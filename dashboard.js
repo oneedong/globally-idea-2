@@ -195,14 +195,22 @@ function showSendNotificationModal(contractId, year) {
         `안녕하세요, ${contract.company} 담당자님\n\n` +
         `${contract.name} 계약의 현재 상태는 "${contract.status}"입니다.\n` +
         `계약 번호: ${contract.contractNumber || '미정'}\n` +
-        `체결일자: ${formatDate(contract.date)}\n\n` +
-        `추가 문의사항이 있으시면 연락 주시기 바랍니다.\n\n` +
+        `고객사 게시일자: ${formatDate(contract.date)}\n` +
+        `${contract.signingDate ? '체결일자: ' + formatDate(contract.signingDate) + '\n' : ''}` +
+        `\n추가 문의사항이 있으시면 연락 주시기 바랍니다.\n\n` +
         `KB증권 드림`;
     
     document.getElementById('notification-message').value = messageTemplate;
     
-    // 이메일 입력란 초기화
-    document.getElementById('recipient-email').value = '';
+    // 고객사 ID를 이메일 주소로 변환 (예: 고객사ID@example.com)
+    // 실제 환경에서는 고객사 이메일 정보를 데이터베이스에서 가져와야 함
+    const customerEmail = `${contract.company}@example.com`;
+    
+    // 이메일 입력란에 고객사 이메일 자동 입력
+    document.getElementById('recipient-email').value = customerEmail;
+    
+    // 참조 이메일 입력란 초기화
+    document.getElementById('cc-email').value = '';
     
     // 연락처 입력란 초기화
     document.getElementById('recipient-phone').value = '';
@@ -238,10 +246,19 @@ function sendNotification() {
     
     // 수신자 정보
     let recipient = '';
+    let ccRecipient = '';
+    
     if (method === 'email') {
         recipient = document.getElementById('recipient-email').value;
+        ccRecipient = document.getElementById('cc-email').value;
+        
         if (!recipient || !isValidEmail(recipient)) {
             alert('유효한 이메일 주소를 입력해주세요.');
+            return;
+        }
+        
+        if (ccRecipient && !isValidEmail(ccRecipient)) {
+            alert('유효한 참조 이메일 주소를 입력해주세요.');
             return;
         }
     } else {
@@ -260,14 +277,18 @@ function sendNotification() {
     }
     
     // 발송 기록 저장
-    saveNotificationHistory(contract, method, recipient, message);
+    saveNotificationHistory(contract, method, recipient, message, ccRecipient);
     
     // 모달 닫기
     closeSendNotificationModal();
     
     // 성공 메시지
     if (method === 'email') {
-        alert(`${recipient}로 이메일이 발송되었습니다.`);
+        let successMsg = `${recipient}로 이메일이 발송되었습니다.`;
+        if (ccRecipient) {
+            successMsg += ` (참조: ${ccRecipient})`;
+        }
+        alert(successMsg);
     } else {
         alert(`${recipient}로 카카오톡 메시지가 발송되었습니다.`);
     }
@@ -286,7 +307,7 @@ function isValidPhone(phone) {
 }
 
 // 발송 기록 저장
-function saveNotificationHistory(contract, method, recipient, message) {
+function saveNotificationHistory(contract, method, recipient, message, ccRecipient) {
     // 계약에 발송 기록 배열이 없으면 초기화
     if (!contract.notifications) {
         contract.notifications = [];
@@ -297,6 +318,7 @@ function saveNotificationHistory(contract, method, recipient, message) {
         id: Date.now().toString(),
         method: method,
         recipient: recipient,
+        ccRecipient: ccRecipient || '', // 참조 이메일 추가
         message: message,
         sentAt: new Date().toISOString(),
         sentBy: currentUser.id
@@ -347,16 +369,16 @@ function addContract() {
     
     // 폼 데이터 가져오기
     const name = document.getElementById('add-contract-name').value;
-    const type = document.getElementById('add-contract-type').value;
     const company = document.getElementById('add-contract-company').value;
     const date = document.getElementById('add-contract-date').value;
+    const signingDate = document.getElementById('add-contract-signing-date').value;
     const status = document.getElementById('add-contract-status').value;
     const details = document.getElementById('add-contract-details').value;
     const fileInput = document.getElementById('contract-file-input');
     
     // 필수 입력 확인
     if (!name || !company || !date) {
-        alert('계약명, 거래 상대방, 체결일자는 필수 입력 항목입니다.');
+        alert('계약명, 거래 상대방, 고객사 게시일자는 필수 입력 항목입니다.');
         return;
     }
     
@@ -386,9 +408,10 @@ function addContract() {
         id: contractId,
         contractNumber: contractNumber,
         name: name,
-        type: type,
+        type: '기타', // 기본값으로 '기타' 설정
         company: company,
         date: date,
+        signingDate: signingDate || '', // 체결일자 추가
         status: status,
         details: details,
         department: currentUser.department,
@@ -499,16 +522,16 @@ function updateContract() {
     
     // 폼 데이터 가져오기
     const name = document.getElementById('add-contract-name').value;
-    const type = document.getElementById('add-contract-type').value;
     const company = document.getElementById('add-contract-company').value;
     const date = document.getElementById('add-contract-date').value;
+    const signingDate = document.getElementById('add-contract-signing-date').value;
     const status = document.getElementById('add-contract-status').value;
     const details = document.getElementById('add-contract-details').value;
     const fileInput = document.getElementById('contract-file-input');
     
     // 필수 입력 확인
     if (!name || !company || !date) {
-        alert('계약명, 거래 상대방, 체결일자는 필수 입력 항목입니다.');
+        alert('계약명, 거래 상대방, 고객사 게시일자는 필수 입력 항목입니다.');
         return;
     }
     
@@ -543,9 +566,9 @@ function updateContract() {
             const updatedContract = {
                 ...oldContract,
                 name: name,
-                type: type,
                 company: company,
                 date: date,
+                signingDate: signingDate || oldContract.signingDate || '', // 체결일자 추가
                 status: status,
                 details: details,
                 file: fileData,
@@ -569,9 +592,9 @@ function updateContract() {
         const updatedContract = {
             ...oldContract,
             name: name,
-            type: type,
             company: company,
             date: date,
+            signingDate: signingDate || oldContract.signingDate || '', // 체결일자 추가
             status: status,
             details: details,
             updatedAt: new Date().toISOString()
@@ -1445,6 +1468,7 @@ function showContractDetailModal(contract, year) {
     document.getElementById('detail-contract-type').textContent = contract.type || '없음';
     document.getElementById('detail-company').textContent = contract.company || '없음';
     document.getElementById('detail-date').textContent = formatDate(contract.date) || '없음';
+    document.getElementById('detail-signing-date').textContent = contract.signingDate ? formatDate(contract.signingDate) : '없음'; // 체결일자 표시
     document.getElementById('detail-status').textContent = contract.status || '없음';
     document.getElementById('detail-content').textContent = contract.details || '없음';
     
@@ -1547,16 +1571,11 @@ function displayContracts(year) {
     
     // 필터 적용
     const filterName = document.getElementById('filter-name').value;
-    const filterType = document.getElementById('filter-type').value;
     const filterCompany = document.getElementById('filter-company').value;
     const filterStatus = document.getElementById('filter-status').value;
     
     if (filterName) {
         filteredContracts = filteredContracts.filter(contract => contract.name === filterName);
-    }
-    
-    if (filterType) {
-        filteredContracts = filteredContracts.filter(contract => contract.type === filterType);
     }
     
     if (filterCompany) {
@@ -1678,9 +1697,9 @@ function updateContractTable(contracts) {
                     ${contract.name}
                 </a>
             </td>
-            <td>${contract.type || '-'}</td>
             <td>${contract.company || '-'}</td>
             <td>${formatDate(contract.date)}</td>
+            <td>${contract.signingDate ? formatDate(contract.signingDate) : '-'}</td>
             <td class="${statusClass}">${contract.status || '-'}</td>
             <td>${fileIconHtml}</td>
             <td>${notificationIconHtml}</td>
@@ -1842,7 +1861,6 @@ function applyFilters() {
 function resetFilters() {
     // 필터 초기화
     document.getElementById('filter-name').value = '';
-    document.getElementById('filter-type').value = '';
     document.getElementById('filter-company').value = '';
     document.getElementById('filter-status').value = '';
     
@@ -1877,9 +1895,9 @@ function showEditContractModal(contractId, year) {
     
     // 폼 데이터 설정
     document.getElementById('add-contract-name').value = contract.name || '';
-    document.getElementById('add-contract-type').value = contract.type || '매매계약';
     document.getElementById('add-contract-company').value = contract.company || '';
     document.getElementById('add-contract-date').value = contract.date ? new Date(contract.date).toISOString().split('T')[0] : '';
+    document.getElementById('add-contract-signing-date').value = contract.signingDate ? new Date(contract.signingDate).toISOString().split('T')[0] : '';
     document.getElementById('add-contract-status').value = contract.status || '법무검토 완료';
     document.getElementById('add-contract-details').value = contract.details || '';
     

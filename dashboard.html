@@ -48,17 +48,6 @@
                             </select>
                         </div>
                         <div class="filter-item">
-                            <label for="filter-type">계약 종류:</label>
-                            <select id="filter-type" onchange="applyFilters()">
-                                <option value="">전체</option>
-                                <option value="매매계약">매매계약</option>
-                                <option value="용역계약">용역계약</option>
-                                <option value="공급계약">공급계약</option>
-                                <option value="대리점계약">대리점계약</option>
-                                <option value="기타">기타</option>
-                            </select>
-                        </div>
-                        <div class="filter-item">
                             <label for="filter-company">거래 상대방:</label>
                             <select id="filter-company" onchange="applyFilters()">
                                 <option value="">전체</option>
@@ -80,8 +69,8 @@
                             <col style="width: 40px;">  <!-- No. -->
                             <col style="width: 110px;"> <!-- 계약번호 -->
                             <col style="width: 180px;"> <!-- 계약명 -->
-                            <col style="width: 90px;">  <!-- 계약 종류 -->
                             <col style="width: 130px;"> <!-- 거래 상대방 -->
+                            <col style="width: 90px;">  <!-- 고객사 게시일자 -->
                             <col style="width: 90px;">  <!-- 체결일자 -->
                             <col style="width: 90px;">  <!-- 체결 현황 -->
                             <col style="width: 70px;">  <!-- 계약서 -->
@@ -94,8 +83,8 @@
                                 <th>No.</th>
                                 <th>계약번호</th>
                                 <th>계약명</th>
-                                <th>계약 종류</th>
                                 <th>거래 상대방</th>
+                                <th>고객사 게시일자</th>
                                 <th>체결일자</th>
                                 <th>체결 현황</th>
                                 <th>계약서</th>
@@ -133,22 +122,16 @@
                     <input type="text" id="add-contract-name" required>
                 </div>
                 <div class="form-group">
-                    <label for="add-contract-type">계약 종류</label>
-                    <select id="add-contract-type" required>
-                        <option value="매매계약">매매계약</option>
-                        <option value="용역계약">용역계약</option>
-                        <option value="공급계약">공급계약</option>
-                        <option value="대리점계약">대리점계약</option>
-                        <option value="기타">기타</option>
-                    </select>
-                </div>
-                <div class="form-group">
                     <label for="add-contract-company">거래 상대방</label>
                     <input type="text" id="add-contract-company" required>
                 </div>
                 <div class="form-group">
-                    <label for="add-contract-date">체결일자</label>
+                    <label for="add-contract-date">고객사 게시일자</label>
                     <input type="date" id="add-contract-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="add-contract-signing-date">체결일자</label>
+                    <input type="date" id="add-contract-signing-date">
                 </div>
                 <div class="form-group">
                     <label for="add-contract-status">체결 현황</label>
@@ -182,9 +165,9 @@
             <h2 id="detail-contract-name"></h2>
             <div class="contract-detail-info">
                 <p><strong>계약번호:</strong> <span id="detail-contract-number"></span></p>
-                <p><strong>계약 종류:</strong> <span id="detail-contract-type"></span></p>
                 <p><strong>거래 상대방:</strong> <span id="detail-company"></span></p>
-                <p><strong>체결일자:</strong> <span id="detail-date"></span></p>
+                <p><strong>고객사 게시일자:</strong> <span id="detail-date"></span></p>
+                <p><strong>체결일자:</strong> <span id="detail-signing-date"></span></p>
                 <p><strong>체결 현황:</strong> <span id="detail-status"></span></p>
                 <p><strong>메모:</strong></p>
                 <div id="detail-content"></div>
@@ -209,9 +192,15 @@
                         <option value="kakao">카카오톡</option>
                     </select>
                 </div>
-                <div class="form-group" id="email-input-group">
-                    <label for="recipient-email">수신자 이메일</label>
-                    <input type="email" id="recipient-email" placeholder="이메일 주소 입력">
+                <div id="email-input-group">
+                    <div class="form-group">
+                        <label for="recipient-email">받는이</label>
+                        <input type="email" id="recipient-email" placeholder="이메일 주소 입력">
+                    </div>
+                    <div class="form-group">
+                        <label for="cc-email">참조</label>
+                        <input type="email" id="cc-email" placeholder="참조 이메일 주소 입력">
+                    </div>
                 </div>
                 <div class="form-group" id="kakao-input-group" style="display: none;">
                     <label for="recipient-phone">수신자 연락처</label>
