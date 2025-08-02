@@ -512,8 +512,9 @@ input[type="date"] {
     justify-content: flex-end;
 }
 
-/* 반응형 스타일 */
+/* 반응형 스타일 - 모바일 최적화 */
 @media (max-width: 768px) {
+    /* 기본 레이아웃 조정 */
     .content {
         flex-direction: column;
     }
@@ -522,19 +523,245 @@ input[type="date"] {
         width: 100%;
         border-right: none;
         border-bottom: 1px solid #dee2e6;
+        resize: none;
+        overflow: visible;
+        max-height: none;
+        padding: 10px;
     }
     
-    .modal-content {
-        width: 90%;
+    /* 사이드바 헤더 스타일 */
+    .sidebar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
     }
     
+    .sidebar-header h2 {
+        margin: 0;
+        font-size: 16px;
+        padding: 0;
+    }
+    
+    .toggle-sidebar {
+        background: none;
+        border: none;
+        color: #495057;
+        font-size: 14px;
+        cursor: pointer;
+        padding: 5px;
+    }
+    
+    .toggle-sidebar:hover {
+        color: #007bff;
+    }
+    
+    /* 연도 목록 가로 스크롤 */
+    #year-list {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding: 5px 0;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+    
+    #year-list li {
+        flex: 0 0 auto;
+        margin-right: 10px;
+    }
+    
+    #year-list a {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+    
+    /* 헤더 조정 */
     header {
         flex-direction: column;
         text-align: center;
+        padding: 10px;
     }
     
     .logo-container {
         margin-bottom: 1rem;
+    }
+    
+    header h1 {
+        font-size: 18px;
+    }
+    
+    .logo {
+        height: 30px;
+    }
+    
+    .user-info {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+    }
+    
+    /* 테이블 반응형 처리 */
+    #contract-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+        width: 100%;
+        font-size: 14px;
+    }
+    
+    #contract-table th, 
+    #contract-table td {
+        padding: 8px 5px;
+        font-size: 13px;
+    }
+    
+    /* 초소형 화면에서는 테이블을 카드 형태로 변경 */
+    @media (max-width: 480px) {
+        #contract-table {
+            white-space: normal;
+        }
+        
+        #contract-table thead {
+            display: none;
+        }
+        
+        #contract-table, 
+        #contract-table tbody, 
+        #contract-table tr {
+            display: block;
+            width: 100%;
+        }
+        
+        #contract-table tr {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background-color: #fff;
+        }
+        
+        #contract-table td {
+            display: flex;
+            padding: 5px 10px;
+            text-align: left;
+            border: none;
+        }
+        
+        #contract-table td:before {
+            content: attr(data-label);
+            font-weight: bold;
+            width: 40%;
+            margin-right: 10px;
+        }
+        
+        /* 특정 열 숨기기 */
+        #contract-table td:nth-child(1) {
+            display: none; /* No. 열 숨기기 */
+        }
+    }
+    
+    /* 검색창 및 필터 최적화 */
+    .search-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-bar input {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .search-bar button {
+        width: 100%;
+        margin: 5px 0;
+    }
+    
+    .filter-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-item {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .reset-filters-btn {
+        width: 100%;
+        margin-top: 10px;
+    }
+    
+    /* 모달 최적화 */
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 15px;
+    }
+    
+    .modal h2 {
+        font-size: 18px;
+        margin-bottom: 15px;
+    }
+    
+    /* 모달 내 입력 필드 최적화 */
+    .modal input,
+    .modal select,
+    .modal textarea {
+        font-size: 16px; /* iOS에서 자동 확대 방지 */
+        padding: 10px;
+    }
+    
+    /* 모달 닫기 버튼 크기 조정 */
+    .close {
+        font-size: 28px;
+        right: 10px;
+        top: 5px;
+    }
+    
+    /* 폼 요소 최적화 */
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    /* 버튼 크기 조정 */
+    button {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+    
+    /* 모달 내 버튼 간격 */
+    .contract-actions {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .contract-actions button {
+        margin: 5px 0;
+        width: 100%;
+    }
+    
+    /* 페이지네이션 최적화 */
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .pagination-button {
+        margin: 3px;
+        padding: 6px 10px;
     }
 } 
 
